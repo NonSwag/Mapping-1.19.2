@@ -59,7 +59,7 @@ public class Mappings extends Mapping {
     @Nonnull
     @Override
     public Version getVersion() {
-        return Version.v1_16_4;
+        return Version.v1_19_1;
     }
 
     @Nonnull
