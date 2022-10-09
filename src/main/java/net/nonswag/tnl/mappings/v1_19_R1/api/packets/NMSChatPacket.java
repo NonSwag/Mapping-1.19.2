@@ -1,11 +1,10 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.packets;
 
-import net.minecraft.server.v1_16_R3.ChatMessage;
-import net.minecraft.server.v1_16_R3.ChatMessageType;
-import net.minecraft.server.v1_16_R3.IChatBaseComponent;
-import net.minecraft.server.v1_16_R3.PacketPlayOutChat;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
 import net.nonswag.tnl.listener.api.packets.ChatPacket;
-import org.bukkit.craftbukkit.v1_16_R3.util.CraftChatMessage;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
@@ -18,18 +17,13 @@ public final class NMSChatPacket extends ChatPacket {
 
     @Nonnull
     @Override
-    public PacketPlayOutChat build() {
-        IChatBaseComponent[] msg = CraftChatMessage.fromString(getMessage());
-        if (msg.length > 0) return new PacketPlayOutChat(msg[0], type(), getSender());
-        return new PacketPlayOutChat(new ChatMessage(getMessage()), type(), getSender());
-    }
-
-    @Nonnull
-    private ChatMessageType type() {
+    public Packet<ClientGamePacketListener> build() {
+        /*
         return switch (getType()) {
-            case CHAT -> ChatMessageType.CHAT;
-            case GAME_INFO -> ChatMessageType.GAME_INFO;
-            case SYSTEM -> ChatMessageType.SYSTEM;
+            case CHAT -> new ClientboundPlayerChatPacket();
+            case SYSTEM, GAME_INFO -> new ClientboundSystemChatPacket(Component.nullToEmpty(getMessage()), false);
         };
+         */
+        return new ClientboundSystemChatPacket(Component.nullToEmpty(getMessage()), false);
     }
 }

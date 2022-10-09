@@ -1,6 +1,6 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.packets;
 
-import net.minecraft.server.v1_16_R3.PacketPlayOutWindowData;
+import net.minecraft.network.protocol.game.ClientboundContainerSetDataPacket;
 import net.nonswag.tnl.listener.api.packets.WindowDataPacket;
 
 import javax.annotation.Nonnull;
@@ -13,7 +13,7 @@ public final class NMSWindowDataPacket extends WindowDataPacket {
 
     @Nonnull
     @Override
-    public PacketPlayOutWindowData build() {
-        return new PacketPlayOutWindowData(getWindowId(), getProperty(), getValue());
+    public ClientboundContainerSetDataPacket build() {
+        return new ClientboundContainerSetDataPacket(getWindowId(), getProperty(), getValue());
     }
 }

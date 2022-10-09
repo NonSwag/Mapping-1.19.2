@@ -1,6 +1,6 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.packets;
 
-import net.minecraft.server.v1_16_R3.PacketPlayOutUpdateTime;
+import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
 import net.nonswag.tnl.listener.api.packets.UpdateTimePacket;
 
 import javax.annotation.Nonnull;
@@ -13,7 +13,7 @@ public final class NMSUpdateTimePacket extends UpdateTimePacket {
 
     @Nonnull
     @Override
-    public PacketPlayOutUpdateTime build() {
-        return new PacketPlayOutUpdateTime(getAge(), getTimestamp(), isCycle());
+    public ClientboundSetTimePacket build() {
+        return new ClientboundSetTimePacket(getAge(), getTimestamp(), isCycle());
     }
 }

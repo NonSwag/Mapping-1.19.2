@@ -1,6 +1,8 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.entity;
 
-import net.minecraft.world.level.block.FallingBlock;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.phys.Vec3;
 import net.nonswag.tnl.core.api.reflection.Reflection;
 import net.nonswag.tnl.listener.api.entity.TNLEntity;
 import net.nonswag.tnl.listener.api.entity.TNLFallingBlock;
@@ -8,33 +10,33 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_19_R1.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
 import org.bukkit.entity.Entity;
 
 import javax.annotation.Nonnull;
 
-public class NMSFallingBlock extends FallingBlock implements TNLFallingBlock {
+public class NMSFallingBlock extends FallingBlockEntity implements TNLFallingBlock {
 
     public NMSFallingBlock(@Nonnull Location location, @Nonnull Material type) {
-        super(((CraftWorld) Objects.nonnull(location.getWorld())).getHandle(), location.getX(), location.getY(), location.getZ(), ((CraftBlockData) type.createBlockData()).getState());
-        ticksLived = 1;
-        persist = true;
-        setNoGravity(true);
+        super(((CraftWorld) location.getWorld()).getHandle(), location.getX(), location.getY(), location.getZ(), ((CraftBlockData) type.createBlockData()).getState());
+        this.blocksBuilding = false;
+        this.setDeltaMovement(Vec3.ZERO);
+        this.setStartPos(this.blockPosition());
     }
 
     @Override
     public void setType(@Nonnull Material type) {
-        Reflection.Field.set(this, "block", ((CraftBlockData) type.createBlockData()).getState());
+        Reflection.Field.set(this, "blockState", ((CraftBlockData) type.createBlockData()).getState());
     }
 
     @Override
     public void setGlowing(boolean glowing) {
-        this.glowing = glowing;
-        setFlag(6, true);
+        setGlowingTag(glowing);
     }
 
     @Override
     public boolean teleport(@Nonnull Location location) {
-        setLocation(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
+        moveTo(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
         return true;
     }
 
@@ -50,8 +52,8 @@ public class NMSFallingBlock extends FallingBlock implements TNLFallingBlock {
 
     @Override
     public void setCustomName(@Nonnull String customName) {
-        IChatBaseComponent[] components = CraftChatMessage.fromString(customName);
-        super.setCustomName(components[0]);
+        setCustomName(Component.literal(customName));
+        setCustomNameVisible(true);
     }
 
     @Override

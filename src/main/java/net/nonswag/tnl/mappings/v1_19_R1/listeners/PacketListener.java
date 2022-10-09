@@ -3,8 +3,12 @@ package net.nonswag.tnl.mappings.v1_19_R1.listeners;
 import com.google.gson.JsonElement;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.game.*;
-import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.nonswag.tnl.core.api.file.helper.JsonHelper;
 import net.nonswag.tnl.core.api.language.Language;
 import net.nonswag.tnl.core.api.logger.Logger;
@@ -17,7 +21,6 @@ import net.nonswag.tnl.listener.api.gui.AnvilGUI;
 import net.nonswag.tnl.listener.api.gui.GUI;
 import net.nonswag.tnl.listener.api.gui.GUIItem;
 import net.nonswag.tnl.listener.api.gui.Interaction;
-import net.nonswag.tnl.listener.api.item.TNLItem;
 import net.nonswag.tnl.listener.api.mods.ModMessage;
 import net.nonswag.tnl.listener.api.packets.OpenWindowPacket;
 import net.nonswag.tnl.listener.api.packets.SetSlotPacket;
@@ -30,12 +33,11 @@ import net.nonswag.tnl.listener.api.sign.SignMenu;
 import net.nonswag.tnl.listener.events.*;
 import net.nonswag.tnl.listener.events.mods.labymod.LabyPlayerMessageEvent;
 import net.nonswag.tnl.mappings.v1_19_R1.api.player.NMSPlayer;
-import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.Waterlogged;
+import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
@@ -47,27 +49,26 @@ public class PacketListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onPacket(@Nonnull PlayerPacketEvent event) {
         TNLPlayer player = event.getPlayer();
-        if (event.getPacket() instanceof PacketPlayInChat packet) {
-            PlayerChatEvent chatEvent = new PlayerChatEvent(player, packet.b());
+        if (event.getPacket() instanceof ServerboundChatPacket packet) {
+            PlayerChatEvent chatEvent = new PlayerChatEvent(player, packet.message());
             if (Settings.BETTER_CHAT.getValue() && !chatEvent.isCommand()) {
                 player.messenger().chat(chatEvent);
                 event.setCancelled(true);
             }
-        } else if (event.getPacket() instanceof PacketPlayInClientCommand packet) {
-            PacketPlayInClientCommand.EnumClientCommand clientCommand = packet.b();
-            if (clientCommand.equals(PacketPlayInClientCommand.EnumClientCommand.a)) {
+        } else if (event.getPacket() instanceof ServerboundClientCommandPacket packet) {
+            if (packet.getAction().equals(ServerboundClientCommandPacket.Action.REQUEST_STATS)) {
                 event.setCancelled(true);
             }
-        } else if (event.getPacket() instanceof PacketPlayInSettings packet) {
-            Language language = Language.fromLocale(packet.locale);
+        } else if (event.getPacket() instanceof ServerboundClientInformationPacket packet) {
+            Language language = Language.fromLocale(packet.language());
             Language old = player.data().getLanguage();
             if (!language.equals(Language.UNKNOWN) && !language.equals(old)) {
                 player.data().setLanguage(language);
                 new PlayerLanguageChangeEvent(player, old).call();
             }
-        } else if (event.getPacket() instanceof PacketPlayInCustomPayload packet) {
+        } else if (event.getPacket() instanceof ServerboundCustomPayloadPacket packet) {
             event.setCancelled(true);
-            String namespace = packet.c.c();
+            String namespace = packet.getIdentifier().getNamespace();
             if (!namespace.equals("labymod3")) return;
             try {
                 byte[] data = new byte[packet.data.readableBytes()];
@@ -75,78 +76,82 @@ public class PacketListener implements Listener {
                 ByteBuf buf = Unpooled.wrappedBuffer(data);
                 String key = ModPacketSerializer.readString(buf, Short.MAX_VALUE);
                 JsonElement message = JsonHelper.parse(ModPacketSerializer.readString(buf, Short.MAX_VALUE));
-                ModMessage modMessage = new ModMessage(packet.tag.getKey(), key, message);
+                ModMessage modMessage = new ModMessage(packet.getIdentifier().getPath(), key, message);
                 player.labymod().handleMessage(modMessage);
                 new LabyPlayerMessageEvent(player.labymod(), modMessage).call();
             } catch (Exception e) {
                 Logger.error.println("An error occurred while reading a mod message from <'" + namespace + "'>", e);
             }
-        } else if (event.getPacket() instanceof PacketPlayInUseEntity packet) {
-            Entity entity = packet.a(((CraftWorld) player.worldManager().getWorld()).getHandle());
+        } else if (event.getPacket() instanceof ServerboundInteractPacket packet) {
+            Entity entity = packet.getTarget(((CraftWorld) player.worldManager().getWorld()).getHandle());
             if (entity != null) {
                 if (!player.delay("entity-interact", 50)) return;
                 TNLEvent entityEvent;
-                if (packet.b().equals(PacketPlayInUseEntity.EnumEntityUseAction.ATTACK)) {
+                if (packet.getActionType().equals(ServerboundInteractPacket.ActionType.ATTACK)) {
                     entityEvent = new EntityDamageByPlayerEvent(player, entity.getBukkitEntity());
                 } else {
                     entityEvent = new PlayerInteractAtEntityEvent(player, entity.getBukkitEntity());
                 }
                 if (!entityEvent.call()) event.setCancelled(true);
             } else {
-                int id = event.<Integer>getPacketField("a").nonnull();
-                FakePlayer fakePlayer = player.npcFactory().getFakePlayer(id);
+                FakePlayer fakePlayer = player.npcFactory().getFakePlayer(packet.getEntityId());
                 if (fakePlayer != null) {
                     if (!player.delay("fakeplayer-interact", 50)) return;
-                    FakePlayer.InteractEvent.Type type = packet.b().equals(PacketPlayInUseEntity.EnumEntityUseAction.ATTACK) ?
+                    FakePlayer.InteractEvent.Type type = packet.getActionType().equals(ServerboundInteractPacket.ActionType.ATTACK) ?
                             FakePlayer.InteractEvent.Type.LEFT_CLICK : FakePlayer.InteractEvent.Type.RIGHT_CLICK;
                     fakePlayer.onInteract().accept(new FakePlayer.InteractEvent(player, fakePlayer, type));
                 } else {
                     if (!player.delay("hologram-interact", 50)) return;
-                    InteractEvent.Type type = packet.b().equals(PacketPlayInUseEntity.EnumEntityUseAction.ATTACK) ?
+                    InteractEvent.Type type = packet.getActionType().equals(ServerboundInteractPacket.ActionType.ATTACK) ?
                             InteractEvent.Type.LEFT_CLICK : InteractEvent.Type.RIGHT_CLICK;
                     for (Hologram hologram : Hologram.getHolograms()) {
                         for (int i : player.hologramManager().getIds(hologram)) {
-                            if (id != i) continue;
+                            if (packet.getEntityId() != i) continue;
                             hologram.onInteract().accept(new InteractEvent(hologram, player, type));
                             return;
                         }
                     }
                 }
             }
-        } else if (event.getPacket() instanceof PacketPlayInBlockDig packet) {
-            PlayerDamageBlockEvent.BlockDamageType damageType = PlayerDamageBlockEvent.BlockDamageType.fromString(packet.d().name());
-            if (damageType.isUnknown()) return;
-            BlockPosition position = packet.b();
-            Block block = new Location(player.worldManager().getWorld(), position.getX(), position.getY(), position.getZ()).getBlock();
-            Block relative = block.getRelative(packet.c().getAdjacentX(), packet.c().getAdjacentY(), packet.c().getAdjacentZ());
-            if (relative.getType().equals(Material.FIRE)) {
-                position = new BlockPosition(relative.getX(), relative.getY(), relative.getZ());
-                block = new Location(player.worldManager().getWorld(), position.getX(), position.getY(), position.getZ()).getBlock();
-            }
-            PlayerDamageBlockEvent blockEvent = new PlayerDamageBlockEvent(player, block, damageType);
-            event.setCancelled(!blockEvent.call());
-            if (blockEvent.isCancelled()) return;
-            if (blockEvent.getBlockDamageType().isInteraction(false)) {
-                Bootstrap.getInstance().sync(() -> {
-                    BlockFace[] faces = {BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST, BlockFace.NORTH, BlockFace.UP, BlockFace.DOWN};
-                    for (BlockFace blockFace : faces) {
-                        Block rel = blockEvent.getBlock().getRelative(blockFace);
-                        player.worldManager().sendBlockChange(rel.getLocation(), rel.getBlockData());
-                        rel.getState().update(true, false);
+        } else if (event.getPacket() instanceof ServerboundPlayerActionPacket packet) {
+            switch (packet.getAction()) {
+                case STOP_DESTROY_BLOCK, START_DESTROY_BLOCK, ABORT_DESTROY_BLOCK -> {
+                    PlayerDamageBlockEvent.BlockDamageType damageType = PlayerDamageBlockEvent.BlockDamageType.fromString(packet.getAction().name());
+                    if (damageType.isUnknown()) return;
+                    BlockPos position = packet.getPos();
+                    Block block = new Location(player.worldManager().getWorld(), position.getX(), position.getY(), position.getZ()).getBlock();
+                    Block relative = block.getRelative(packet.getDirection().getStepX(), packet.getDirection().getStepY(), packet.getDirection().getStepZ());
+                    if (relative.getType().equals(Material.FIRE)) {
+                        position = new BlockPos(relative.getX(), relative.getY(), relative.getZ());
+                        block = new Location(player.worldManager().getWorld(), position.getX(), position.getY(), position.getZ()).getBlock();
                     }
-                });
-            } else if (blockEvent.getBlockDamageType().isItemAction()) {
-                player.inventoryManager().updateInventory();
+                    PlayerDamageBlockEvent blockEvent = new PlayerDamageBlockEvent(player, block, damageType);
+                    event.setCancelled(!blockEvent.call());
+                    if (blockEvent.isCancelled()) return;
+                    if (blockEvent.getBlockDamageType().isInteraction(false)) {
+                        Bootstrap.getInstance().sync(() -> {
+                            BlockFace[] faces = {BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST, BlockFace.NORTH, BlockFace.UP, BlockFace.DOWN};
+                            for (BlockFace blockFace : faces) {
+                                Block rel = blockEvent.getBlock().getRelative(blockFace);
+                                player.worldManager().sendBlockChange(rel.getLocation(), rel.getBlockData());
+                                rel.getState().update(true, false);
+                            }
+                        });
+                    } else if (blockEvent.getBlockDamageType().isItemAction()) {
+                        player.inventoryManager().updateInventory();
+                    }
+                }
             }
-        } else if (event.getPacket() instanceof PacketPlayInTabComplete) {
-            String[] args = ((PacketPlayInTabComplete) event.getPacket()).c().split(" ");
-            int index = ((PacketPlayInTabComplete) event.getPacket()).b();
+        } else if (event.getPacket() instanceof ServerboundCommandSuggestionPacket packet) {
+            String[] args = packet.getCommand().split(" ");
+            int index = packet.getId();
             if (args.length == 0) event.setCancelled(true);
             else if (args[0].startsWith("/")) {
                 if (!Settings.TAB_COMPLETER.getValue() && !player.permissionManager().hasPermission(Settings.TAB_COMPLETE_BYPASS_PERMISSION.getValue())) {
                     event.setCancelled(true);
                 }
             }
+            /*
         } else if (event.getPacket() instanceof PacketPlayInBlockPlace packet) {
             ItemStack itemStack = null;
             if (packet.b().equals(EnumHand.MAIN_HAND)) {
@@ -190,13 +195,14 @@ public class PacketListener implements Listener {
                 Bootstrap.getInstance().sync(() -> leftover.values().forEach(item ->
                         player.worldManager().getWorld().dropItemNaturally(player.worldManager().getLocation(), item)));
             }
-        } else if (event.getPacket() instanceof PacketPlayInUpdateSign) {
+             */
+        } else if (event.getPacket() instanceof ServerboundSignUpdatePacket packet) {
             SignMenu menu = player.interfaceManager().getSignMenu();
             if (menu == null) return;
             event.setCancelled(true);
             if (menu.getResponse() != null) {
                 Bootstrap.getInstance().sync(() -> {
-                    boolean success = menu.getResponse().test(player, ((PacketPlayInUpdateSign) event.getPacket()).c());
+                    boolean success = menu.getResponse().test(player, packet.getLines());
                     if (!success && menu.isReopenOnFail()) {
                         player.interfaceManager().openVirtualSignEditor(menu);
                     }
@@ -204,40 +210,40 @@ public class PacketListener implements Listener {
             }
             if (menu.getLocation() != null) player.worldManager().sendBlockChange(menu.getLocation());
             player.interfaceManager().closeSignMenu();
-        } else if (event.getPacket() instanceof PacketPlayInItemName packet) {
+        } else if (event.getPacket() instanceof ServerboundRenameItemPacket packet) {
             GUI gui = player.interfaceManager().getGUI();
             if (!(gui instanceof AnvilGUI anvil)) return;
             event.setCancelled(true);
             for (AnvilGUI.TextInputEvent textInputEvent : anvil.getTextInputEvents()) {
-                textInputEvent.onTextInput(player, packet.b() == null ? "" : packet.b());
+                textInputEvent.onTextInput(player, packet.getName());
             }
-        } else if (event.getPacket() instanceof PacketPlayInResourcePackStatus packet) {
-            ((NMSPlayer) player).resourceManager().setStatus(switch (packet.status) {
+        } else if (event.getPacket() instanceof ServerboundResourcePackPacket packet) {
+            ((NMSPlayer) player).resourceManager().setStatus(switch (packet.getAction()) {
                 case ACCEPTED -> ResourceManager.Status.ACCEPTED;
                 case DECLINED -> ResourceManager.Status.DECLINED;
                 case FAILED_DOWNLOAD -> ResourceManager.Status.FAILED_DOWNLOAD;
                 case SUCCESSFULLY_LOADED -> ResourceManager.Status.SUCCESSFULLY_LOADED;
             });
-        } else if (event.getPacket() instanceof PacketPlayInWindowClick packet) {
+        } else if (event.getPacket() instanceof ServerboundContainerClickPacket packet) {
             GUI gui = player.interfaceManager().getGUI();
             if (gui == null) return;
-            int slot = packet.c();
+            int slot = packet.getSlotNum();
             if (slot < gui.getSize() && slot >= 0) {
-                Interaction.Type type = Interaction.Type.fromNMS(packet.d(), packet.g().name());
+                Interaction.Type type = Interaction.Type.fromNMS(packet.getButtonNum(), packet.getClickType().name());
                 gui.getClickListener().onClick(player, slot, type);
                 GUIItem item = gui.getItem(slot);
                 if (item != null) for (Interaction interaction : item.getInteractions(type)) {
                     interaction.getAction().accept(player);
                 }
             } else if (slot >= gui.getSize()) {
-                event.setPacketField("slot", slot - gui.getSize() + 9);
-                event.setPacketField("a", 0);
+                event.setPacketField("slotNum", slot - gui.getSize() + 9);
+                event.setPacketField("containerId", 0);
             }
             event.setCancelled(true);
             event.reply(SetSlotPacket.create(SetSlotPacket.Inventory.COURSER, -1, null));
             player.inventoryManager().updateInventory();
             player.interfaceManager().updateGUI();
-        } else if (event.getPacket() instanceof PacketPlayInCloseWindow) {
+        } else if (event.getPacket() instanceof ServerboundContainerClosePacket) {
             GUI gui = player.interfaceManager().getGUI();
             if (gui == null) return;
             event.setCancelled(true);
@@ -248,24 +254,24 @@ public class PacketListener implements Listener {
                 if (gui.getCloseSound() != null) player.soundManager().playSound(gui.getCloseSound());
                 player.interfaceManager().closeGUI(false);
             }
-        } else if (event.getPacket() instanceof PacketPlayInPickItem packet) {
-            PlayerItemPickEvent pickEvent = new PlayerItemPickEvent(player, packet.b());
+        } else if (event.getPacket() instanceof ServerboundPickItemPacket packet) {
+            PlayerItemPickEvent pickEvent = new PlayerItemPickEvent(player, packet.getSlot());
             if (!pickEvent.call()) event.setCancelled(true);
-        } else if (event.getPacket() instanceof PacketPlayInUseItem packet) {
-            BlockPosition position = packet.c().getBlockPosition();
+        } else if (event.getPacket() instanceof ServerboundUseItemOnPacket packet) {
+            BlockPos position = packet.getHitResult().getBlockPos();
             Block block = new Location(player.worldManager().getWorld(), position.getX(), position.getY(), position.getZ()).getBlock();
             if (block.getLocation().distance(player.worldManager().getLocation()) > 10) {
                 event.setCancelled(true);
                 return;
             }
-            final EnumDirection direction = ((PacketPlayInUseItem) event.getPacket()).c().getDirection();
+            Direction direction = packet.getHitResult().getDirection();
             BlockFace face = player.worldManager().getFacing().getOppositeFace();
             try {
                 face = BlockFace.valueOf(direction.name());
             } catch (Exception ignored) {
             } finally {
                 ItemStack itemStack;
-                if (packet.b().equals(EnumHand.MAIN_HAND)) {
+                if (packet.getHand().equals(InteractionHand.MAIN_HAND)) {
                     itemStack = player.inventoryManager().getInventory().getItemInMainHand();
                 } else itemStack = player.inventoryManager().getInventory().getItemInOffHand();
                 PlayerInteractEvent interactEvent = new PlayerInteractEvent(player, block, face, itemStack);
@@ -279,19 +285,16 @@ public class PacketListener implements Listener {
                     }
                 }, 1);
             }
-        } else if (event.getPacket() instanceof PacketPlayOutSpawnEntity) {
-            var k = event.<EntityTypes<?>>getPacketField("k");
-            if (!k.hasValue()) return;
-            if (Settings.BETTER_TNT.getValue()) if (k.nonnull().equals(EntityTypes.TNT)) event.setCancelled(true);
-            if (Settings.BETTER_FALLING_BLOCKS.getValue()) {
-                if (k.nonnull().equals(EntityTypes.FALLING_BLOCK)) event.setCancelled(true);
-            }
-        } else if (event.getPacket() instanceof PacketPlayOutResourcePackSend packet) {
-            String url = event.<String>getPacketField("a").nonnull();
-            String hash = event.<String>getPacketField("b").nonnull();
-            ((NMSPlayer) player).resourceManager().setResourcePackUrl(url);
-            ((NMSPlayer) player).resourceManager().setResourcePackHash(hash);
-        } else if (event.getPacket() instanceof PacketPlayOutCloseWindow) {
+        } else if (event.getPacket() instanceof ClientboundAddEntityPacket packet) {
+            var type = event.<EntityType<?>>getPacketField("type");
+            if (type == null) return;
+            if (Settings.BETTER_FALLING_BLOCKS.getValue() && type.equals(EntityType.FALLING_BLOCK)) {
+                event.setCancelled(true);
+            } else if (Settings.BETTER_TNT.getValue() && type.equals(EntityType.TNT)) event.setCancelled(true);
+        } else if (event.getPacket() instanceof ClientboundResourcePackPacket packet) {
+            ((NMSPlayer) player).resourceManager().setResourcePackUrl(packet.getUrl());
+            ((NMSPlayer) player).resourceManager().setResourcePackHash(packet.getHash());
+        } else if (event.getPacket() instanceof ServerboundContainerClosePacket) {
             GUI gui = player.interfaceManager().getGUI();
             if (gui == null) return;
             if (gui.getCloseSound() != null) player.soundManager().playSound(gui.getCloseSound());

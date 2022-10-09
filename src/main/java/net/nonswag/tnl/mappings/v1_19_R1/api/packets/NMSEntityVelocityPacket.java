@@ -1,7 +1,7 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.packets;
 
-import net.minecraft.server.v1_16_R3.PacketPlayOutEntityVelocity;
-import net.minecraft.server.v1_16_R3.Vec3D;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.world.phys.Vec3;
 import net.nonswag.tnl.listener.api.packets.EntityVelocityPacket;
 import org.bukkit.util.Vector;
 
@@ -15,8 +15,7 @@ public final class NMSEntityVelocityPacket extends EntityVelocityPacket {
 
     @Nonnull
     @Override
-    public PacketPlayOutEntityVelocity build() {
-        Vec3D vec3D = new Vec3D(getVector().getX(), getVector().getY(), getVector().getZ());
-        return new PacketPlayOutEntityVelocity(getEntityId(), vec3D);
+    public ClientboundSetEntityMotionPacket build() {
+        return new ClientboundSetEntityMotionPacket(getEntityId(), new Vec3(getVector().getX(), getVector().getY(), getVector().getZ()));
     }
 }

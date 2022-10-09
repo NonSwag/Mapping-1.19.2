@@ -1,6 +1,6 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.packets;
 
-import net.minecraft.server.v1_16_R3.PacketPlayOutCloseWindow;
+import net.minecraft.network.protocol.game.ClientboundContainerClosePacket;
 import net.nonswag.tnl.listener.api.packets.CloseWindowPacket;
 
 import javax.annotation.Nonnull;
@@ -13,7 +13,7 @@ public final class NMSCloseWindowPacket extends CloseWindowPacket {
 
     @Nonnull
     @Override
-    public PacketPlayOutCloseWindow build() {
-        return new PacketPlayOutCloseWindow(getWindowId());
+    public ClientboundContainerClosePacket build() {
+        return new ClientboundContainerClosePacket(getWindowId());
     }
 }

@@ -1,9 +1,9 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.packets;
 
 import io.netty.buffer.Unpooled;
-import net.minecraft.server.v1_16_R3.MinecraftKey;
-import net.minecraft.server.v1_16_R3.PacketDataSerializer;
-import net.minecraft.server.v1_16_R3.PacketPlayOutCustomPayload;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.nonswag.tnl.listener.api.packets.CustomPayloadPacket;
 
 import javax.annotation.Nonnull;
@@ -16,7 +16,7 @@ public final class NMSCustomPayloadPacket extends CustomPayloadPacket {
 
     @Nonnull
     @Override
-    public PacketPlayOutCustomPayload build() {
-        return new PacketPlayOutCustomPayload(new MinecraftKey(getChannel()), new PacketDataSerializer(Unpooled.wrappedBuffer(getBytes())));
+    public ClientboundCustomPayloadPacket build() {
+        return new ClientboundCustomPayloadPacket(new ResourceLocation(getChannel()), new FriendlyByteBuf(Unpooled.wrappedBuffer(getBytes())));
     }
 }

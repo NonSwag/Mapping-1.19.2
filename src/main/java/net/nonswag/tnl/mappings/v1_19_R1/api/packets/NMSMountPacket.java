@@ -1,7 +1,8 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.packets;
 
-import net.minecraft.server.v1_16_R3.PacketPlayOutMount;
-import net.nonswag.tnl.core.api.reflection.Reflection;
+import io.netty.buffer.Unpooled;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
 import net.nonswag.tnl.listener.api.packets.MountPacket;
 
 import javax.annotation.Nonnull;
@@ -14,10 +15,10 @@ public final class NMSMountPacket extends MountPacket {
 
     @Nonnull
     @Override
-    public PacketPlayOutMount build() {
-        PacketPlayOutMount packet = new PacketPlayOutMount();
-        Reflection.setField(packet, "a", getHolderId());
-        Reflection.setField(packet, "b", getMounts());
-        return packet;
+    public ClientboundSetPassengersPacket build() {
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        buffer.writeVarInt(getHolderId());
+        buffer.writeVarIntArray(getMounts());
+        return new ClientboundSetPassengersPacket(buffer);
     }
 }

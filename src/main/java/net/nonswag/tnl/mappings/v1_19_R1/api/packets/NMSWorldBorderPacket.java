@@ -1,9 +1,11 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.packets;
 
-import net.minecraft.server.v1_16_R3.PacketPlayOutWorldBorder;
-import net.minecraft.server.v1_16_R3.WorldBorder;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.*;
+import net.minecraft.world.level.border.WorldBorder;
 import net.nonswag.tnl.listener.api.border.VirtualBorder;
 import net.nonswag.tnl.listener.api.packets.WorldBorderPacket;
+import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 
 import javax.annotation.Nonnull;
 
@@ -15,27 +17,22 @@ public final class NMSWorldBorderPacket extends WorldBorderPacket {
 
     @Nonnull
     @Override
-    public PacketPlayOutWorldBorder build() {
+    public Packet<ClientGamePacketListener> build() {
         WorldBorder worldBorder = new WorldBorder();
-        worldBorder.world = ((org.bukkit.craftbukkit.v1_16_R3.CraftWorld) getBorder().getWorld()).getHandle();
-        worldBorder.setWarningDistance(getBorder().getWarningDistance());
+        worldBorder.world = ((CraftWorld) getBorder().getWorld()).getHandle();
+        worldBorder.setWarningBlocks(getBorder().getWarningDistance());
         worldBorder.setSize(getBorder().getSize());
         worldBorder.setCenter(getBorder().getCenter().x(), getBorder().getCenter().z());
-        worldBorder.setDamageAmount(getBorder().getDamageAmount());
-        worldBorder.setDamageBuffer(getBorder().getDamageBuffer());
+        worldBorder.setDamagePerBlock(getBorder().getDamageAmount());
+        worldBorder.setDamageSafeZone(getBorder().getDamageBuffer());
         worldBorder.setWarningTime(getBorder().getWarningTime());
-        return new PacketPlayOutWorldBorder(worldBorder, action());
-    }
-
-    @Nonnull
-    private PacketPlayOutWorldBorder.EnumWorldBorderAction action() {
         return switch (getAction()) {
-            case SET_SIZE -> PacketPlayOutWorldBorder.EnumWorldBorderAction.SET_SIZE;
-            case INITIALIZE -> PacketPlayOutWorldBorder.EnumWorldBorderAction.INITIALIZE;
-            case LERP_SIZE -> PacketPlayOutWorldBorder.EnumWorldBorderAction.LERP_SIZE;
-            case SET_CENTER -> PacketPlayOutWorldBorder.EnumWorldBorderAction.SET_CENTER;
-            case SET_WARNING_BLOCKS -> PacketPlayOutWorldBorder.EnumWorldBorderAction.SET_WARNING_BLOCKS;
-            case SET_WARNING_TIME -> PacketPlayOutWorldBorder.EnumWorldBorderAction.SET_WARNING_TIME;
+            case SET_SIZE -> new ClientboundSetBorderSizePacket(worldBorder);
+            case LERP_SIZE -> new ClientboundSetBorderLerpSizePacket(worldBorder);
+            case SET_CENTER -> new ClientboundSetBorderCenterPacket(worldBorder);
+            case INITIALIZE -> new ClientboundInitializeBorderPacket(worldBorder);
+            case SET_WARNING_TIME -> new ClientboundSetBorderWarningDelayPacket(worldBorder);
+            case SET_WARNING_BLOCKS -> new ClientboundSetBorderWarningDistancePacket(worldBorder);
         };
     }
 }

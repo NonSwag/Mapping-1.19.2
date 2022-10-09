@@ -1,7 +1,8 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.packets;
 
-import net.minecraft.server.v1_16_R3.PacketPlayOutEntityTeleport;
-import net.nonswag.tnl.core.api.reflection.Reflection;
+import io.netty.buffer.Unpooled;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.nonswag.tnl.listener.api.location.Position;
 import net.nonswag.tnl.listener.api.packets.EntityTeleportPacket;
 
@@ -15,15 +16,15 @@ public final class NMSEntityTeleportPacket extends EntityTeleportPacket {
 
     @Nonnull
     @Override
-    public PacketPlayOutEntityTeleport build() {
-        PacketPlayOutEntityTeleport packet = new PacketPlayOutEntityTeleport();
-        Reflection.setField(packet, "a", getEntityId());
-        Reflection.setField(packet, "b", getPosition().getX());
-        Reflection.setField(packet, "c", getPosition().getY());
-        Reflection.setField(packet, "d", getPosition().getZ());
-        Reflection.setField(packet, "e", (byte) ((int) (getPosition().getYaw() * 256.0F / 360.0F)));
-        Reflection.setField(packet, "f", (byte) ((int) (getPosition().getPitch() * 256.0F / 360.0F)));
-        Reflection.setField(packet, "g", false);
-        return packet;
+    public ClientboundTeleportEntityPacket build() {
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        buffer.writeVarInt(getEntityId());
+        buffer.writeDouble(getPosition().getX());
+        buffer.writeDouble(getPosition().getY());
+        buffer.writeDouble(getPosition().getZ());
+        buffer.writeByte((byte) ((int) (getPosition().getYaw() * 256.0F / 360.0F)));
+        buffer.writeByte((byte) ((int) (getPosition().getPitch() * 256.0F / 360.0F)));
+        buffer.writeBoolean(false);
+        return new ClientboundTeleportEntityPacket(buffer);
     }
 }

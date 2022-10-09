@@ -1,6 +1,6 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.packets;
 
-import net.minecraft.server.v1_16_R3.DataWatcher;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.nonswag.tnl.listener.api.border.VirtualBorder;
 import net.nonswag.tnl.listener.api.item.SlotType;
 import net.nonswag.tnl.listener.api.location.BlockLocation;
@@ -10,7 +10,7 @@ import net.nonswag.tnl.listener.api.packets.*;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.boss.BossBar;
-import org.bukkit.craftbukkit.v1_16_R3.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.LivingEntity;
@@ -113,13 +113,13 @@ public final class PacketManager extends Mapping.Packets {
     @Nonnull
     @Override
     public <W> EntityMetadataPacket<W> entityMetadataPacket(int entityId, @Nonnull W dataWatcher, boolean updateAll) {
-        return (EntityMetadataPacket<W>) new NMSEntityMetadataPacket(entityId, (DataWatcher) dataWatcher, updateAll);
+        return (EntityMetadataPacket<W>) new NMSEntityMetadataPacket(entityId, (SynchedEntityData) dataWatcher, updateAll);
     }
 
     @Nonnull
     @Override
     public <W> EntityMetadataPacket<W> entityMetadataPacket(@Nonnull Entity entity, boolean updateAll) {
-        return entityMetadataPacket(entity.getEntityId(), (W) ((CraftEntity) entity).getHandle().getDataWatcher(), updateAll);
+        return entityMetadataPacket(entity.getEntityId(), (W) ((CraftEntity) entity).getHandle().getEntityData(), updateAll);
     }
 
     @Nonnull
@@ -226,7 +226,7 @@ public final class PacketManager extends Mapping.Packets {
 
     @Nonnull
     @Override
-    public ResourcePackPacket resourcePackPacket(@Nonnull String url, @Nullable String hash) {
-        return new NMSResourcePackPacket(url, hash);
+    public ResourcePackPacket resourcePackPacket(@Nonnull String url, @Nullable String hash, @Nullable String prompt, boolean required) {
+        return new NMSResourcePackPacket(url, hash, prompt, required);
     }
 }

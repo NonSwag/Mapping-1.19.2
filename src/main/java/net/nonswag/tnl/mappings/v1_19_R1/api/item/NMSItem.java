@@ -18,7 +18,6 @@ import org.bukkit.potion.PotionEffect;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
-import java.util.List;
 
 public class NMSItem extends TNLItem {
 
@@ -74,12 +73,6 @@ public class NMSItem extends TNLItem {
         item.setTag(nbt.versioned());
         setItemMeta(CraftItemStack.getItemMeta(item));
         return this;
-    }
-
-    @Nonnull
-    @Override
-    public TNLItem setLore(@Nonnull List<String> lore) {
-        return super.setLore(lore);
     }
 
     @Nonnull

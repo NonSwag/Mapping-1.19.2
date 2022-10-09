@@ -1,8 +1,8 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.packets;
 
-import net.minecraft.server.v1_16_R3.PacketPlayOutNamedEntitySpawn;
+import net.minecraft.network.protocol.game.ClientboundAddPlayerPacket;
 import net.nonswag.tnl.listener.api.packets.NamedEntitySpawnPacket;
-import org.bukkit.craftbukkit.v1_16_R3.entity.CraftHumanEntity;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftHumanEntity;
 import org.bukkit.entity.HumanEntity;
 
 import javax.annotation.Nonnull;
@@ -15,7 +15,7 @@ public final class NMSNamedEntitySpawnPacket extends NamedEntitySpawnPacket {
 
     @Nonnull
     @Override
-    public PacketPlayOutNamedEntitySpawn build() {
-        return new PacketPlayOutNamedEntitySpawn(((CraftHumanEntity) getHuman()).getHandle());
+    public ClientboundAddPlayerPacket build() {
+        return new ClientboundAddPlayerPacket(((CraftHumanEntity) getHuman()).getHandle());
     }
 }

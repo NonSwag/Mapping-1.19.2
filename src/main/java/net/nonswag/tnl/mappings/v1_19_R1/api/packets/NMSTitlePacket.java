@@ -1,7 +1,8 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.packets;
 
-import net.minecraft.server.v1_16_R3.ChatMessage;
-import net.minecraft.server.v1_16_R3.PacketPlayOutTitle;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.*;
 import net.nonswag.tnl.listener.api.packets.TitlePacket;
 
 import javax.annotation.Nonnull;
@@ -15,20 +16,14 @@ public final class NMSTitlePacket extends TitlePacket {
 
     @Nonnull
     @Override
-    public PacketPlayOutTitle build() {
-        ChatMessage message = getText() == null ? null : new ChatMessage(getText());
-        return new PacketPlayOutTitle(action(), message, getTimeIn(), getTimeStay(), getTimeOut());
-    }
-
-    @Nonnull
-    private PacketPlayOutTitle.EnumTitleAction action() {
+    public Packet<ClientGamePacketListener> build() {
         return switch (getAction()) {
-            case CLEAR -> PacketPlayOutTitle.EnumTitleAction.CLEAR;
-            case TITLE -> PacketPlayOutTitle.EnumTitleAction.TITLE;
-            case RESET -> PacketPlayOutTitle.EnumTitleAction.RESET;
-            case TIMES -> PacketPlayOutTitle.EnumTitleAction.TIMES;
-            case SUBTITLE -> PacketPlayOutTitle.EnumTitleAction.SUBTITLE;
-            case ACTIONBAR -> PacketPlayOutTitle.EnumTitleAction.ACTIONBAR;
+            case CLEAR -> new ClientboundClearTitlesPacket(false);
+            case RESET -> new ClientboundClearTitlesPacket(true);
+            case TITLE -> new ClientboundSetTitleTextPacket(Component.nullToEmpty(getText()));
+            case SUBTITLE -> new ClientboundSetSubtitleTextPacket(Component.nullToEmpty(getText()));
+            case ACTIONBAR -> new ClientboundSetActionBarTextPacket(Component.nullToEmpty(getText()));
+            case TIMES -> new ClientboundSetTitlesAnimationPacket(getTimeIn(), getTimeStay(), getTimeOut());
         };
     }
 }

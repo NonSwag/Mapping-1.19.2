@@ -1,7 +1,7 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.packets;
 
-import net.minecraft.server.v1_16_R3.BlockPosition;
-import net.minecraft.server.v1_16_R3.PacketPlayOutBlockBreakAnimation;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
 import net.nonswag.tnl.listener.api.location.BlockLocation;
 import net.nonswag.tnl.listener.api.packets.BlockBreakAnimationPacket;
 
@@ -15,8 +15,8 @@ public final class NMSBlockBreakAnimationPacket extends BlockBreakAnimationPacke
 
     @Nonnull
     @Override
-    public PacketPlayOutBlockBreakAnimation build() {
-        BlockPosition position = new BlockPosition(getLocation().getX(), getLocation().getY(), getLocation().getZ());
-        return new PacketPlayOutBlockBreakAnimation(getLocation().getBlock().hashCode(), position, getState());
+    public ClientboundBlockDestructionPacket build() {
+        BlockPos position = new BlockPos(getLocation().getX(), getLocation().getY(), getLocation().getZ());
+        return new ClientboundBlockDestructionPacket(getLocation().getBlock().hashCode(), position, getState());
     }
 }

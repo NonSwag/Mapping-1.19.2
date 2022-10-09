@@ -4,8 +4,6 @@ import net.nonswag.tnl.listener.api.packets.EntityBodyRotationPacket;
 
 import javax.annotation.Nonnull;
 
-import static net.minecraft.server.v1_16_R3.PacketPlayOutEntity.PacketPlayOutEntityLook;
-
 public final class NMSEntityBodyRotationPacket extends EntityBodyRotationPacket {
 
     NMSEntityBodyRotationPacket(int entityId, float rotation) {
@@ -14,7 +12,7 @@ public final class NMSEntityBodyRotationPacket extends EntityBodyRotationPacket 
 
     @Nonnull
     @Override
-    public PacketPlayOutEntityLook build() {
-        return new PacketPlayOutEntityLook(getEntityId(), (byte) getRotation(), (byte) 0, true);
+    public Void build() {
+        throw new UnsupportedOperationException();
     }
 }

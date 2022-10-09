@@ -1,18 +1,18 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.item;
 
 import com.google.common.collect.ImmutableMap;
+import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 import lombok.Getter;
-import net.minecraft.server.v1_16_R3.BlockComposter;
-import net.minecraft.server.v1_16_R3.IMaterial;
-import net.minecraft.server.v1_16_R3.Item;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.block.ComposterBlock;
 import net.nonswag.tnl.core.api.reflection.Reflection;
 import net.nonswag.tnl.listener.api.item.ItemHelper;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_16_R3.util.CraftMagicNumbers;
+import org.bukkit.craftbukkit.v1_19_R1.util.CraftMagicNumbers;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.HashMap;
 import java.util.Map;
 
 @Getter
@@ -23,14 +23,14 @@ public class NMSItemHelper extends ItemHelper {
 
     @Override
     public void setMaxStackSize(@Nonnull Material material, int maxStackSize) {
-        Reflection.setField(material, "maxStack", maxStackSize);
-        Reflection.setField(Item.getById(material.ordinal()), Item.class, "maxStackSize", maxStackSize);
+        Reflection.Field.set(material, "maxStack", maxStackSize);
+        Reflection.Field.set(Item.byId(material.ordinal()), Item.class, "maxStackSize", maxStackSize);
     }
 
     @Override
     public void setDurability(@Nonnull Material material, int durability) {
-        Reflection.setField(material, "durability", durability);
-        Reflection.setField(Item.getById(material.ordinal()), Item.class, "durability", durability);
+        Reflection.Field.set(material, "durability", durability);
+        Reflection.Field.set(Item.byId(material.ordinal()), Item.class, "durability", durability);
     }
 
     @Nonnull
@@ -38,8 +38,8 @@ public class NMSItemHelper extends ItemHelper {
     public Map<Material, Float> getCompostableItems() {
         if (compostableItems != null) return compostableItems;
         ImmutableMap.Builder<Material, Float> items = ImmutableMap.builder();
-        var map = Reflection.<Map<IMaterial, Float>>getStaticField(BlockComposter.class, "b").getOrDefault(new HashMap<>());
-        map.forEach((item, weight) -> items.put(CraftMagicNumbers.getMaterial(item.getItem()), weight));
+        Object2FloatMap<ItemLike> map = ComposterBlock.COMPOSTABLES;
+        map.forEach((item, weight) -> items.put(CraftMagicNumbers.getMaterial(item.asItem()), weight));
         return compostableItems = items.build();
     }
 }
