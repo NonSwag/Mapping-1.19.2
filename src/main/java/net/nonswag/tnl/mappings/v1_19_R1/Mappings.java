@@ -41,7 +41,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 
-@Mapping.Info(id = "Mapping-1.16.5", name = "Origin 1.16.5", authors = "NonSwag", description = "An official TNL-Production")
+@Mapping.Info(id = "Mapping-1.19.2", name = "Origin 1.19.2", authors = "NonSwag", description = "An official TNL-Production")
 public class Mappings extends Mapping {
 
     public Mappings(@Nonnull File file) {
