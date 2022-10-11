@@ -7,6 +7,7 @@ import net.nonswag.tnl.listener.api.entity.TNLEntityPlayer;
 import net.nonswag.tnl.listener.api.entity.TNLFallingBlock;
 import net.nonswag.tnl.listener.api.item.ItemHelper;
 import net.nonswag.tnl.listener.api.item.TNLItem;
+import net.nonswag.tnl.listener.api.logger.LogManager;
 import net.nonswag.tnl.listener.api.mapper.Mapping;
 import net.nonswag.tnl.listener.api.player.GameProfile;
 import net.nonswag.tnl.listener.api.player.TNLPlayer;
@@ -21,6 +22,7 @@ import net.nonswag.tnl.mappings.v1_19_R1.api.entity.NMSEntityPlayer;
 import net.nonswag.tnl.mappings.v1_19_R1.api.entity.NMSFallingBlock;
 import net.nonswag.tnl.mappings.v1_19_R1.api.item.NMSItem;
 import net.nonswag.tnl.mappings.v1_19_R1.api.item.NMSItemHelper;
+import net.nonswag.tnl.mappings.v1_19_R1.api.logger.NMSLogManager;
 import net.nonswag.tnl.mappings.v1_19_R1.api.packets.PacketManager;
 import net.nonswag.tnl.mappings.v1_19_R1.api.player.NMSPlayer;
 import net.nonswag.tnl.mappings.v1_19_R1.api.plugin.NMSPluginHelper;
@@ -36,6 +38,7 @@ import org.bukkit.enchantments.EnchantmentTarget;
 import org.bukkit.entity.Player;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -60,12 +63,6 @@ public class Mappings extends Mapping {
     @Override
     public Version getVersion() {
         return Version.v1_19_1;
-    }
-
-    @Nonnull
-    @Override
-    public String overrideLogger() {
-        return "TerminalConsole";
     }
 
     @Nonnull
@@ -126,6 +123,12 @@ public class Mappings extends Mapping {
     @Override
     public Packets packets() {
         return packets == null ? packets = new PacketManager() : packets;
+    }
+
+    @NotNull
+    @Override
+    public LogManager logManager() {
+        return logManager == null ? logManager = new NMSLogManager() : logManager;
     }
 
     @Nullable
