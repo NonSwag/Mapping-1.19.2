@@ -6,7 +6,7 @@ import lombok.Getter;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.ComposterBlock;
-import net.nonswag.tnl.core.api.reflection.Reflection;
+import net.nonswag.core.api.reflection.Reflection;
 import net.nonswag.tnl.listener.api.item.ItemHelper;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.v1_19_R1.util.CraftMagicNumbers;

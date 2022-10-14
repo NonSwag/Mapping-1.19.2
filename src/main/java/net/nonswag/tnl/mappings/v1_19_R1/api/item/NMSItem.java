@@ -5,7 +5,7 @@ import com.mojang.datafixers.util.Pair;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.nonswag.tnl.core.api.logger.Logger;
+import net.nonswag.core.api.logger.Logger;
 import net.nonswag.tnl.listener.api.item.FoodProperties;
 import net.nonswag.tnl.listener.api.item.TNLItem;
 import net.nonswag.tnl.listener.api.nbt.NBTTag;

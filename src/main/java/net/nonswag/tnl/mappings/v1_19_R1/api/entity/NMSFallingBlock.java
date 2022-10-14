@@ -3,7 +3,7 @@ package net.nonswag.tnl.mappings.v1_19_R1.api.entity;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.nonswag.tnl.core.api.reflection.Reflection;
+import net.nonswag.core.api.reflection.Reflection;
 import net.nonswag.tnl.listener.api.entity.TNLEntity;
 import net.nonswag.tnl.listener.api.entity.TNLFallingBlock;
 import org.bukkit.Location;

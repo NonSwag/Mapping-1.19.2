@@ -1,21 +1,20 @@
 package net.nonswag.tnl.mappings.v1_19_R1.listeners;
 
 import com.google.gson.JsonElement;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.nonswag.tnl.core.api.file.helper.JsonHelper;
-import net.nonswag.tnl.core.api.language.Language;
-import net.nonswag.tnl.core.api.logger.Logger;
-import net.nonswag.tnl.core.api.message.Message;
+import net.nonswag.core.api.file.helper.JsonHelper;
+import net.nonswag.core.api.language.Language;
+import net.nonswag.core.api.logger.Logger;
+import net.nonswag.core.api.message.Message;
 import net.nonswag.tnl.holograms.api.Hologram;
 import net.nonswag.tnl.holograms.api.event.InteractEvent;
 import net.nonswag.tnl.listener.Bootstrap;
+import net.nonswag.tnl.listener.api.data.Buffer;
 import net.nonswag.tnl.listener.api.event.TNLEvent;
 import net.nonswag.tnl.listener.api.gui.AnvilGUI;
 import net.nonswag.tnl.listener.api.gui.GUI;
@@ -27,7 +26,6 @@ import net.nonswag.tnl.listener.api.packets.SetSlotPacket;
 import net.nonswag.tnl.listener.api.player.TNLPlayer;
 import net.nonswag.tnl.listener.api.player.manager.ResourceManager;
 import net.nonswag.tnl.listener.api.player.npc.FakePlayer;
-import net.nonswag.tnl.listener.api.serializer.ModPacketSerializer;
 import net.nonswag.tnl.listener.api.settings.Settings;
 import net.nonswag.tnl.listener.api.sign.SignMenu;
 import net.nonswag.tnl.listener.events.*;
@@ -43,6 +41,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 
 import javax.annotation.Nonnull;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 
 public class PacketListener implements Listener {
 
@@ -72,10 +72,9 @@ public class PacketListener implements Listener {
             if (!namespace.equals("labymod3")) return;
             try {
                 byte[] data = new byte[packet.data.readableBytes()];
-                packet.data.readBytes(data);
-                ByteBuf buf = Unpooled.wrappedBuffer(data);
-                String key = ModPacketSerializer.readString(buf, Short.MAX_VALUE);
-                JsonElement message = JsonHelper.parse(ModPacketSerializer.readString(buf, Short.MAX_VALUE));
+                DataInputStream stream = new DataInputStream(new ByteArrayInputStream(data));
+                String key = Buffer.readString(stream);
+                JsonElement message = JsonHelper.parse(Buffer.readString(stream));
                 ModMessage modMessage = new ModMessage(packet.getIdentifier().getPath(), key, message);
                 player.labymod().handleMessage(modMessage);
                 new LabyPlayerMessageEvent(player.labymod(), modMessage).call();

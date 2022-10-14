@@ -3,7 +3,7 @@ package net.nonswag.tnl.mappings.v1_19_R1.api.player.channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import net.nonswag.tnl.core.api.logger.Logger;
+import net.nonswag.core.api.logger.Logger;
 import net.nonswag.tnl.listener.api.player.TNLPlayer;
 import net.nonswag.tnl.listener.events.PlayerPacketEvent;
 
