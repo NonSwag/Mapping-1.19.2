@@ -16,6 +16,9 @@ public final class NMSEntityAnimationPacket extends EntityAnimationPacket {
     @Nonnull
     @Override
     public ClientboundAnimatePacket build() {
-        return new ClientboundAnimatePacket(new FriendlyByteBuf(Unpooled.buffer()).writeVarInt(getEntityId()).writeVarInt(getAnimation().getId()));
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        buffer.writeVarInt(getEntityId());
+        buffer.writeByte(getAnimation().getId());
+        return new ClientboundAnimatePacket(buffer);
     }
 }

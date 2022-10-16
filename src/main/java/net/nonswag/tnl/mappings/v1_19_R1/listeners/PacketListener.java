@@ -1,5 +1,6 @@
 package net.nonswag.tnl.mappings.v1_19_R1.listeners;
 
+import com.destroystokyo.paper.event.server.ServerExceptionEvent;
 import com.google.gson.JsonElement;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -285,8 +286,7 @@ public class PacketListener implements Listener {
                 }, 1);
             }
         } else if (event.getPacket() instanceof ClientboundAddEntityPacket packet) {
-            var type = event.<EntityType<?>>getPacketField("type");
-            if (type == null) return;
+            EntityType<?> type = packet.getType();
             if (Settings.BETTER_FALLING_BLOCKS.getValue() && type.equals(EntityType.FALLING_BLOCK)) {
                 event.setCancelled(true);
             } else if (Settings.BETTER_TNT.getValue() && type.equals(EntityType.TNT)) event.setCancelled(true);
@@ -299,5 +299,10 @@ public class PacketListener implements Listener {
             if (gui.getCloseSound() != null) player.soundManager().playSound(gui.getCloseSound());
             gui.getCloseListener().onClose(player, true);
         }
+    }
+
+    @EventHandler
+    public void onServerException(@Nonnull ServerExceptionEvent event) {
+        event.getException().printStackTrace();
     }
 }

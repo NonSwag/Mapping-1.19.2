@@ -7,6 +7,8 @@ import net.nonswag.tnl.listener.api.location.BlockLocation;
 import net.nonswag.tnl.listener.api.location.Position;
 import net.nonswag.tnl.listener.api.mapper.Mapping;
 import net.nonswag.tnl.listener.api.packets.*;
+import net.nonswag.tnl.listener.api.packets.listener.PacketReader;
+import net.nonswag.tnl.listener.api.packets.listener.PacketWriter;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.boss.BossBar;
@@ -228,5 +230,13 @@ public final class PacketManager extends Mapping.Packets {
     @Override
     public ResourcePackPacket resourcePackPacket(@Nonnull String url, @Nullable String hash, @Nullable String prompt, boolean required) {
         return new NMSResourcePackPacket(url, hash, prompt, required);
+    }
+
+    @Override
+    public void registerPacketReader(@Nonnull PacketReader reader) {
+    }
+
+    @Override
+    public void registerPacketWriter(@Nonnull PacketWriter writer) {
     }
 }

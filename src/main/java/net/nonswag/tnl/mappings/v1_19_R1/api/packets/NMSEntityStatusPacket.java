@@ -16,6 +16,9 @@ public final class NMSEntityStatusPacket extends EntityStatusPacket {
     @Nonnull
     @Override
     public ClientboundEntityEventPacket build() {
-        return new ClientboundEntityEventPacket(new FriendlyByteBuf(Unpooled.buffer()).writeVarInt(getEntityId()).writeVarInt(getStatus().getId()));
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        buffer.writeInt(getEntityId());
+        buffer.writeByte(getStatus().getId());
+        return new ClientboundEntityEventPacket(buffer);
     }
 }

@@ -16,6 +16,9 @@ public final class NMSEntityHeadRotationPacket extends EntityHeadRotationPacket 
     @Nonnull
     @Override
     public ClientboundRotateHeadPacket build() {
-        return new ClientboundRotateHeadPacket(new FriendlyByteBuf(Unpooled.buffer()).writeVarInt(getEntityId()).writeVarInt((int) (getYaw() * 256 / 360)));
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        buffer.writeVarInt(getEntityId());
+        buffer.writeByte((int) (getYaw() * 256 / 360));
+        return new ClientboundRotateHeadPacket(buffer);
     }
 }

@@ -16,6 +16,9 @@ public final class NMSEntityAttachPacket extends EntityAttachPacket {
     @Nonnull
     @Override
     public ClientboundSetEntityLinkPacket build() {
-        return new ClientboundSetEntityLinkPacket(new FriendlyByteBuf(Unpooled.buffer()).writeVarInt(getLeashedId()).writeVarInt(getHolderId()));
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        buffer.writeInt(getLeashedId());
+        buffer.writeInt(getHolderId());
+        return new ClientboundSetEntityLinkPacket(buffer);
     }
 }
