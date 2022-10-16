@@ -50,8 +50,7 @@ import org.bukkit.plugin.Plugin;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collection;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class NMSPlayer extends TNLPlayer {
@@ -141,6 +140,15 @@ public class NMSPlayer extends TNLPlayer {
     @Override
     public PermissionManager permissionManager() {
         if (permissionManager == null) permissionManager = new PermissionManager() {
+
+            @Nonnull
+            @Override
+            public Map<String, Boolean> getPermissions() {
+                Map<String, Boolean> permissions = Reflection.Field.get(attachment, "permissions");
+                if (permissions == null) Reflection.Field.set(attachment, "permissions", permissions = new HashMap<>());
+                return permissions;
+            }
+
             @Nonnull
             @Override
             public TNLPlayer getPlayer() {
