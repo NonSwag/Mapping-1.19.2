@@ -17,7 +17,6 @@ public class NMSLogManager extends LogManager {
         try {
             ((Logger) org.apache.logging.log4j.LogManager.getRootLogger()).getAppenders().values().forEach(appender -> {
                 if (!(appender instanceof AbstractFilterable filter)) return;
-                // if (appender.getName().equalsIgnoreCase("TerminalConsole"))
                 filter.addFilter(LogRewriter.getInstance());
                 filter.addFilter(Filter.getInstance());
             });
