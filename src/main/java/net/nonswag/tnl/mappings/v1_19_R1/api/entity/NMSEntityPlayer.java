@@ -2,7 +2,6 @@ package net.nonswag.tnl.mappings.v1_19_R1.api.entity;
 
 import com.mojang.authlib.properties.Property;
 import lombok.Getter;
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.nonswag.tnl.listener.api.entity.TNLEntityPlayer;
 import net.nonswag.tnl.listener.api.item.SlotType;
@@ -32,7 +31,7 @@ public class NMSEntityPlayer implements TNLEntityPlayer, SlotWrapper {
     public NMSEntityPlayer(@Nonnull World world, double x, double y, double z, float yaw, float pitch, @Nonnull GameProfile profile) {
         this.player = new ServerPlayer(((CraftServer) Bukkit.getServer()).getServer(), ((CraftWorld) world).getHandle(),
                 new com.mojang.authlib.GameProfile(profile.getUniqueId(), profile.getName()), null);
-        player.moveTo(new BlockPos(x, y, z), yaw, pitch);
+        player.moveTo(x, y, z, yaw, pitch);
         Skin skin = profile.getSkin();
         if (skin != null) {
             player.gameProfile.getProperties().put("textures", new Property("textures", skin.getValue(), skin.getSignature()));

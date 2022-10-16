@@ -83,15 +83,13 @@ public class PacketListener implements Listener {
                 Logger.error.println("An error occurred while reading a mod message from <'" + namespace + "'>", e);
             }
         } else if (event.getPacket() instanceof ServerboundInteractPacket packet) {
-            Entity entity = packet.getTarget(((CraftWorld) player.worldManager().getWorld()).getHandle());
+            Entity entity = ((CraftWorld) player.worldManager().getWorld()).getHandle().getEntityLookup().get(packet.getEntityId());
             if (entity != null) {
                 if (!player.delay("entity-interact", 50)) return;
                 TNLEvent entityEvent;
                 if (packet.getActionType().equals(ServerboundInteractPacket.ActionType.ATTACK)) {
                     entityEvent = new EntityDamageByPlayerEvent(player, entity.getBukkitEntity());
-                } else {
-                    entityEvent = new PlayerInteractAtEntityEvent(player, entity.getBukkitEntity());
-                }
+                } else entityEvent = new PlayerInteractAtEntityEvent(player, entity.getBukkitEntity());
                 if (!entityEvent.call()) event.setCancelled(true);
             } else {
                 FakePlayer fakePlayer = player.npcFactory().getFakePlayer(packet.getEntityId());

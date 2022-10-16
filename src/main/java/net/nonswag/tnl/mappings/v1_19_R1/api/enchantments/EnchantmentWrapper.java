@@ -27,7 +27,7 @@ public class EnchantmentWrapper extends Enchant {
 
     public EnchantmentWrapper(@Nonnull NamespacedKey key, @Nonnull String name, @Nonnull EnchantmentTarget target) {
         super(key, name, target);
-        this.namespace = new NamespacedKey(getKey().getNamespace(), getKey().getKey());
+        this.namespace = key;
         this.vanilla = new Enchantment(Enchantment.Rarity.COMMON, EnchantmentCategory.ARMOR, EquipmentSlot.values()) {
             @Override
             public int getMaxLevel() {
@@ -99,13 +99,11 @@ public class EnchantmentWrapper extends Enchant {
     }
 
     @Nonnull
-    @Override
     public String translationKey() {
         return "enchantment.unknown";
     }
 
     @Nonnull
-    @Override
     public Key key() {
         return namespace;
     }
