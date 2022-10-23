@@ -15,6 +15,7 @@ import net.nonswag.tnl.listener.api.plugin.PluginHelper;
 import net.nonswag.tnl.listener.api.plugin.PluginUpdate;
 import net.nonswag.tnl.listener.api.settings.Settings;
 import net.nonswag.tnl.listener.api.version.Version;
+import net.nonswag.tnl.listener.api.world.WorldHelper;
 import net.nonswag.tnl.mappings.v1_19_R1.api.bossbar.NMSBossBar;
 import net.nonswag.tnl.mappings.v1_19_R1.api.enchantments.EnchantmentWrapper;
 import net.nonswag.tnl.mappings.v1_19_R1.api.entity.NMSArmorStand;
@@ -26,11 +27,9 @@ import net.nonswag.tnl.mappings.v1_19_R1.api.logger.NMSLogManager;
 import net.nonswag.tnl.mappings.v1_19_R1.api.packets.PacketManager;
 import net.nonswag.tnl.mappings.v1_19_R1.api.player.NMSPlayer;
 import net.nonswag.tnl.mappings.v1_19_R1.api.plugin.NMSPluginHelper;
+import net.nonswag.tnl.mappings.v1_19_R1.api.world.NMSWorldHelper;
 import net.nonswag.tnl.mappings.v1_19_R1.listeners.PacketListener;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarFlag;
 import org.bukkit.boss.BarStyle;
@@ -38,7 +37,6 @@ import org.bukkit.enchantments.EnchantmentTarget;
 import org.bukkit.entity.Player;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -121,11 +119,17 @@ public class Mappings extends Mapping {
 
     @Nonnull
     @Override
+    public WorldHelper worldHelper() {
+        return new NMSWorldHelper();
+    }
+
+    @Nonnull
+    @Override
     public Packets packets() {
         return packets == null ? packets = new PacketManager() : packets;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public LogManager logManager() {
         return logManager == null ? logManager = new NMSLogManager() : logManager;
