@@ -2,12 +2,14 @@ package net.nonswag.tnl.mappings.v1_19_R1.api.enchantments;
 
 import lombok.Getter;
 import net.kyori.adventure.key.Key;
+import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentCategory;
+import net.nonswag.core.api.reflection.Reflection;
 import net.nonswag.tnl.listener.api.enchantment.Enchant;
 import org.bukkit.NamespacedKey;
 import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
@@ -77,6 +79,7 @@ public class EnchantmentWrapper extends Enchant {
     @Nonnull
     @Override
     protected Enchant register() {
+        Reflection.Field.set(Registry.ENCHANTMENT, MappedRegistry.class, "ca", false);
         Registry.register(Registry.ENCHANTMENT, getNamespace().getKey(), getVanilla());
         return super.register();
     }
