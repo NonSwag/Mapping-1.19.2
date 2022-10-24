@@ -10,6 +10,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.craftbukkit.v1_19_R1.CraftServer;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -51,6 +52,6 @@ public class NMSWorldHelper extends WorldHelper {
 
     @Override
     public void removePlayer(@Nonnull World world, @Nonnull TNLPlayer player) {
-
+        ((CraftWorld) world).getHandle().players.remove(((CraftPlayer) player.bukkit()).getHandle());
     }
 }
