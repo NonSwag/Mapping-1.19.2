@@ -232,6 +232,12 @@ public final class PacketManager extends Mapping.Packets {
         return new NMSResourcePackPacket(url, hash, prompt, required);
     }
 
+    @Nonnull
+    @Override
+    public ItemTakePacket itemTakePacket(int itemId, int collectorId, int amount) {
+        return new NMSItemTakePacket(itemId, collectorId, amount);
+    }
+
     @Override
     public void registerPacketReader(@Nonnull PacketReader reader) {
     }

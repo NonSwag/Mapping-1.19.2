@@ -10,7 +10,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.craftbukkit.v1_19_R1.CraftServer;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
-import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -37,7 +36,7 @@ public class NMSWorldHelper extends WorldHelper {
         }) != null;
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public List<TNLPlayer> getPlayers(@Nonnull World world) {
         List<TNLPlayer> players = new ArrayList<>();
