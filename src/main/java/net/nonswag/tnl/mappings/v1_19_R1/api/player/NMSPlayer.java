@@ -9,7 +9,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.PacketSendListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -50,7 +49,10 @@ import org.bukkit.plugin.Plugin;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public class NMSPlayer extends TNLPlayer {
@@ -265,10 +267,10 @@ public class NMSPlayer extends TNLPlayer {
                 CraftBlockData blockData = (CraftBlockData) Objects.requireNonNullElse(material, Material.SPRUCE_WALL_SIGN).createBlockData();
                 SignBlockEntity tileEntitySign = new SignBlockEntity(position, blockData.getState());
                 for (int line = 0; line < signMenu.getLines().length; line++) {
-                    tileEntitySign.messages[line] = Component.literal(Message.format(signMenu.getLines()[line], getPlayer()));
+                    tileEntitySign.setMessage(line, Component.literal(Message.format(signMenu.getLines()[line], getPlayer())));
                 }
                 worldManager().sendBlockChange(location, blockData);
-                PacketBuilder.of(ClientboundBlockEntityDataPacket.create(tileEntitySign)).send(getPlayer());
+                PacketBuilder.of(Objects.requireNonNull(tileEntitySign.getUpdatePacket())).send(getPlayer());
                 editor.send(getPlayer());
                 this.signMenu = signMenu;
             }
