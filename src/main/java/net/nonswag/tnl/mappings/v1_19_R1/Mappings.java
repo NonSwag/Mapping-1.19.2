@@ -24,12 +24,16 @@ import net.nonswag.tnl.mappings.v1_19_R1.api.entity.NMSFallingBlock;
 import net.nonswag.tnl.mappings.v1_19_R1.api.item.NMSItem;
 import net.nonswag.tnl.mappings.v1_19_R1.api.item.NMSItemHelper;
 import net.nonswag.tnl.mappings.v1_19_R1.api.logger.NMSLogManager;
-import net.nonswag.tnl.mappings.v1_19_R1.api.packets.PacketManager;
+import net.nonswag.tnl.mappings.v1_19_R1.api.packets.incoming.IncomingPacketManager;
+import net.nonswag.tnl.mappings.v1_19_R1.api.packets.outgoing.OutgoingPacketManager;
 import net.nonswag.tnl.mappings.v1_19_R1.api.player.NMSPlayer;
 import net.nonswag.tnl.mappings.v1_19_R1.api.plugin.NMSPluginHelper;
 import net.nonswag.tnl.mappings.v1_19_R1.api.world.NMSWorldHelper;
 import net.nonswag.tnl.mappings.v1_19_R1.listeners.PacketListener;
-import org.bukkit.*;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarFlag;
 import org.bukkit.boss.BarStyle;
@@ -125,14 +129,32 @@ public class Mappings extends Mapping {
 
     @Nonnull
     @Override
-    public Packets packets() {
-        return packets == null ? packets = new PacketManager() : packets;
+    public LogManager logManager() {
+        return logManager == null ? logManager = new NMSLogManager() : logManager;
     }
 
     @Nonnull
     @Override
-    public LogManager logManager() {
-        return logManager == null ? logManager = new NMSLogManager() : logManager;
+    public PacketManager packetManager() {
+        return packetManager == null ? packetManager = new PacketManager() {
+
+            @Nullable
+            private Outgoing outgoing;
+            @Nullable
+            private Incoming incoming;
+
+            @Nonnull
+            @Override
+            public Outgoing outgoing() {
+                return outgoing == null ? outgoing = new OutgoingPacketManager() : outgoing;
+            }
+
+            @Nonnull
+            @Override
+            public Incoming incoming() {
+                return incoming == null ? incoming = new IncomingPacketManager() : incoming;
+            }
+        } : packetManager;
     }
 
     @Nullable

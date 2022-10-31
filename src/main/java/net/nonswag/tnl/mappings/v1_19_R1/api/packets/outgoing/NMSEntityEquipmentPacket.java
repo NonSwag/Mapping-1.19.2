@@ -1,0 +1,30 @@
+package net.nonswag.tnl.mappings.v1_19_R1.api.packets.outgoing;
+
+import com.mojang.datafixers.util.Pair;
+import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.nonswag.tnl.listener.api.item.SlotType;
+import net.nonswag.tnl.listener.api.item.TNLItem;
+import net.nonswag.tnl.listener.api.packets.outgoing.EntityEquipmentPacket;
+import net.nonswag.tnl.mappings.v1_19_R1.api.item.SlotWrapper;
+import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
+
+import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+public final class NMSEntityEquipmentPacket extends EntityEquipmentPacket implements SlotWrapper {
+
+    NMSEntityEquipmentPacket(int entityId, @Nonnull HashMap<SlotType, TNLItem> equipment) {
+        super(entityId, equipment);
+    }
+
+    @Nonnull
+    @Override
+    public ClientboundSetEquipmentPacket build() {
+        List<Pair<EquipmentSlot, net.minecraft.world.item.ItemStack>> equipment = new ArrayList<>();
+        getEquipment().forEach((slot, itemStack) -> equipment.add(new Pair<>(wrap(slot), CraftItemStack.asNMSCopy(itemStack))));
+        return new ClientboundSetEquipmentPacket(getEntityId(), equipment);
+    }
+}

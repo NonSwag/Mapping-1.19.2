@@ -26,7 +26,7 @@ import net.nonswag.tnl.listener.api.entity.TNLEntityLiving;
 import net.nonswag.tnl.listener.api.entity.TNLEntityPlayer;
 import net.nonswag.tnl.listener.api.location.BlockLocation;
 import net.nonswag.tnl.listener.api.mods.labymod.LabyPlayer;
-import net.nonswag.tnl.listener.api.packets.*;
+import net.nonswag.tnl.listener.api.packets.outgoing.*;
 import net.nonswag.tnl.listener.api.player.Skin;
 import net.nonswag.tnl.listener.api.player.TNLPlayer;
 import net.nonswag.tnl.listener.api.player.manager.*;
@@ -660,13 +660,13 @@ public class NMSPlayer extends TNLPlayer {
                 if (p instanceof Packet<?> packet) playerConnection().send(packet, listener != null ? new PacketSendListener() {
                     @Override
                     public void onSuccess() {
-                        listener.onSuccess();
+                        listener.onSuccess(getPlayer());
                     }
 
                     @Nullable
                     @Override
                     public Packet<?> onFailure() {
-                        return listener.onFailure();
+                        return listener.onFailure(getPlayer());
                     }
                 } : null);
                 else throw new IllegalArgumentException("<'%s'> is not a packet".formatted(p.getClass().getName()));
@@ -693,7 +693,7 @@ public class NMSPlayer extends TNLPlayer {
             public void inject() {
                 try {
                     ChannelPipeline pipeline = nms().networkManager.channel.pipeline();
-                    pipeline.addBefore("packet_handler", name, new PlayerChannelHandler() {
+                    pipeline.addFirst(name, new PlayerChannelHandler() {
                         @Nonnull
                         @Override
                         public TNLPlayer getPlayer() {
@@ -701,6 +701,7 @@ public class NMSPlayer extends TNLPlayer {
                         }
 
                         @Override
+                        @Deprecated
                         public boolean handleInjections(@Nonnull Object packet) {
                             return NMSPlayer.this.handleInjections(packet);
                         }
