@@ -64,6 +64,18 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
         };
     }
 
+    @NotNull
+    @Override
+    public SetExperiencePacket setExperiencePacket(float experienceProgress, int totalExperience, int experienceLevel) {
+        return new SetExperiencePacket(experienceProgress, totalExperience, experienceLevel) {
+            @NotNull
+            @Override
+            public ClientboundSetExperiencePacket build() {
+                return new ClientboundSetExperiencePacket(getExperienceProgress(), getTotalExperience(), getExperienceLevel());
+            }
+        };
+    }
+
     @Nonnull
     @Override
     public BossBarPacket bossBarPacket(@Nonnull BossBarPacket.Action action, @Nonnull BossBar bossBar) {
@@ -147,8 +159,8 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
 
     @Nonnull
     @Override
-    public EntityAnimationPacket entityAnimationPacket(int entityId, @Nonnull EntityAnimationPacket.Animation animation) {
-        return new EntityAnimationPacket(entityId, animation) {
+    public AnimationPacket animationPacket(int entityId, @Nonnull AnimationPacket.Animation animation) {
+        return new AnimationPacket(entityId, animation) {
             @NotNull
             @Override
             public ClientboundAnimatePacket build() {
@@ -518,7 +530,9 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     public <P> PacketBuilder map(@Nonnull P packet) {
         if (packet instanceof ClientboundInitializeBorderPacket instance) {
         } else if (packet instanceof ClientboundAnimatePacket instance) {
+            return AnimationPacket.create(instance.getId(), AnimationPacket.Animation.values()[instance.getAction()]);
         } else if (packet instanceof ClientboundSetExperiencePacket instance) {
+            return SetExperiencePacket.create(instance.getExperienceProgress(), instance.getTotalExperience(), instance.getExperienceLevel());
         } else if (packet instanceof ClientboundCommandSuggestionsPacket instance) {
         } else if (packet instanceof ClientboundSelectAdvancementsTabPacket instance) {
         } else if (packet instanceof ClientboundSetDisplayChatPreviewPacket instance) {
