@@ -8,7 +8,6 @@ import net.nonswag.tnl.listener.api.item.SlotType;
 import net.nonswag.tnl.listener.api.item.TNLItem;
 import net.nonswag.tnl.listener.api.player.GameProfile;
 import net.nonswag.tnl.listener.api.player.Skin;
-import net.nonswag.tnl.mappings.v1_19_R1.api.item.SlotWrapper;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -19,7 +18,9 @@ import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
 
 import javax.annotation.Nonnull;
 
-public class NMSEntityPlayer implements TNLEntityPlayer, SlotWrapper {
+import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.wrap;
+
+public class NMSEntityPlayer implements TNLEntityPlayer {
 
     @Getter
     @Nonnull

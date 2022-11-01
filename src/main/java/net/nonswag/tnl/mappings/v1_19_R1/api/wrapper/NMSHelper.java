@@ -8,17 +8,25 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.LastSeenMessages;
 import net.minecraft.network.chat.MessageSignature;
+import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.nonswag.tnl.listener.api.item.SlotType;
 import net.nonswag.tnl.listener.api.item.TNLItem;
 import net.nonswag.tnl.listener.api.location.BlockPosition;
 import net.nonswag.tnl.listener.api.packets.incoming.ChatCommandPacket;
 import net.nonswag.tnl.listener.api.packets.incoming.SetBeaconPacket;
 import net.nonswag.tnl.listener.api.packets.incoming.UseItemOnPacket;
+import net.nonswag.tnl.listener.api.packets.outgoing.GameStateChangePacket;
+import net.nonswag.tnl.listener.api.packets.outgoing.OpenWindowPacket;
+import net.nonswag.tnl.listener.api.packets.outgoing.PlayerInfoPacket;
 import net.nonswag.tnl.listener.api.player.Hand;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -33,7 +41,79 @@ import java.util.List;
 import java.util.Optional;
 
 public final class NMSHelper {
-    
+
+    @Nonnull
+    public static EquipmentSlot wrap(@Nonnull SlotType type) {
+        return switch (type) {
+            case MAIN_HAND -> EquipmentSlot.MAINHAND;
+            case OFF_HAND -> EquipmentSlot.OFFHAND;
+            case HELMET -> EquipmentSlot.HEAD;
+            case CHESTPLATE -> EquipmentSlot.CHEST;
+            case LEGGINGS -> EquipmentSlot.LEGS;
+            case BOOTS -> EquipmentSlot.FEET;
+        };
+    }
+
+    @Nonnull
+    public static ClientboundGameEventPacket.Type wrap(@Nonnull GameStateChangePacket.Identifier identifier) {
+        return switch (identifier.getId()) {
+            case 0 -> ClientboundGameEventPacket.NO_RESPAWN_BLOCK_AVAILABLE;
+            case 1 -> ClientboundGameEventPacket.START_RAINING;
+            case 2 -> ClientboundGameEventPacket.STOP_RAINING;
+            case 3 -> ClientboundGameEventPacket.CHANGE_GAME_MODE;
+            case 4 -> ClientboundGameEventPacket.WIN_GAME;
+            case 5 -> ClientboundGameEventPacket.DEMO_EVENT;
+            case 6 -> ClientboundGameEventPacket.ARROW_HIT_PLAYER;
+            case 7 -> ClientboundGameEventPacket.RAIN_LEVEL_CHANGE;
+            case 8 -> ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE;
+            case 9 -> ClientboundGameEventPacket.PUFFER_FISH_STING;
+            case 10 -> ClientboundGameEventPacket.GUARDIAN_ELDER_EFFECT;
+            case 11 -> ClientboundGameEventPacket.IMMEDIATE_RESPAWN;
+            default -> throw new IllegalStateException("Unexpected value: " + identifier.getId());
+        };
+    }
+
+    @Nonnull
+    public static ClientboundPlayerInfoPacket.Action wrap(@Nonnull PlayerInfoPacket.Action action) {
+        return switch (action) {
+            case ADD_PLAYER -> ClientboundPlayerInfoPacket.Action.ADD_PLAYER;
+            case REMOVE_PLAYER -> ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER;
+            case UPDATE_LATENCY -> ClientboundPlayerInfoPacket.Action.UPDATE_LATENCY;
+            case UPDATE_GAME_MODE -> ClientboundPlayerInfoPacket.Action.UPDATE_GAME_MODE;
+            case UPDATE_DISPLAY_NAME -> ClientboundPlayerInfoPacket.Action.UPDATE_DISPLAY_NAME;
+        };
+    }
+
+    @Nonnull
+    public static MenuType<?> wrap(@Nonnull OpenWindowPacket.Type type) {
+        return switch (type) {
+            case CHEST_9X1 -> MenuType.GENERIC_9x1;
+            case CHEST_9X2 -> MenuType.GENERIC_9x2;
+            case CHEST_9X3 -> MenuType.GENERIC_9x3;
+            case CHEST_9X4 -> MenuType.GENERIC_9x4;
+            case CHEST_9X5 -> MenuType.GENERIC_9x5;
+            case CHEST_9X6 -> MenuType.GENERIC_9x6;
+            case DISPENSER -> MenuType.GENERIC_3x3;
+            case ANVIL -> MenuType.ANVIL;
+            case BEACON -> MenuType.BEACON;
+            case BLAST_FURNACE -> MenuType.BLAST_FURNACE;
+            case BREWING_STAND -> MenuType.BREWING_STAND;
+            case WORKBENCH -> MenuType.CRAFTING;
+            case ENCHANTER -> MenuType.ENCHANTMENT;
+            case FURNACE -> MenuType.FURNACE;
+            case GRINDSTONE -> MenuType.GRINDSTONE;
+            case HOPPER -> MenuType.HOPPER;
+            case LECTERN -> MenuType.LECTERN;
+            case LOOM -> MenuType.LOOM;
+            case MERCHANT -> MenuType.MERCHANT;
+            case SHULKER_BOX -> MenuType.SHULKER_BOX;
+            case SMITHING_TABLE -> MenuType.SMITHING;
+            case SMOKER -> MenuType.SMOKER;
+            case CARTOGRAPHY_TABLE -> MenuType.CARTOGRAPHY_TABLE;
+            case STONECUTTER -> MenuType.STONECUTTER;
+        };
+    }
+
     @Nonnull
     public static Vec3i wrap(@Nonnull Vector vector) {
         return new Vec3i(vector.getX(), vector.getY(), vector.getZ());

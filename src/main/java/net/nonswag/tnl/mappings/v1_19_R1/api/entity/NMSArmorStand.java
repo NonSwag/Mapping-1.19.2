@@ -9,7 +9,6 @@ import net.minecraft.world.entity.decoration.ArmorStand;
 import net.nonswag.tnl.listener.api.entity.TNLArmorStand;
 import net.nonswag.tnl.listener.api.item.SlotType;
 import net.nonswag.tnl.listener.api.item.TNLItem;
-import net.nonswag.tnl.mappings.v1_19_R1.api.item.SlotWrapper;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
@@ -19,7 +18,9 @@ import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class NMSArmorStand implements TNLArmorStand, SlotWrapper {
+import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.wrap;
+
+public class NMSArmorStand implements TNLArmorStand {
 
     @Nonnull
     private final ArmorStand armorStand;
