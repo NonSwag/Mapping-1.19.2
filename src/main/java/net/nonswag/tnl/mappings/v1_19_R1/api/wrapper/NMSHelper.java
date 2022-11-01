@@ -11,6 +11,7 @@ import net.minecraft.network.chat.MessageSignature;
 import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -30,6 +31,7 @@ import net.nonswag.tnl.listener.api.packets.outgoing.PlayerInfoPacket;
 import net.nonswag.tnl.listener.api.player.Hand;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
+import org.bukkit.SoundCategory;
 import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
 import org.bukkit.util.Vector;
 
@@ -74,6 +76,35 @@ public final class NMSHelper {
     }
 
     @Nonnull
+    public static GameStateChangePacket.Identifier wrap(@Nonnull ClientboundGameEventPacket.Type type) {
+        if (type.equals(ClientboundGameEventPacket.NO_RESPAWN_BLOCK_AVAILABLE)) {
+            return GameStateChangePacket.NO_RESPAWN_BLOCK_AVAILABLE;
+        } else if (type.equals(ClientboundGameEventPacket.START_RAINING)) {
+            return GameStateChangePacket.START_RAINING;
+        } else if (type.equals(ClientboundGameEventPacket.STOP_RAINING)) {
+            return GameStateChangePacket.STOP_RAINING;
+        } else if (type.equals(ClientboundGameEventPacket.CHANGE_GAME_MODE)) {
+            return GameStateChangePacket.CHANGE_GAMEMODE;
+        } else if (type.equals(ClientboundGameEventPacket.WIN_GAME)) {
+            return GameStateChangePacket.WIN_GAME;
+        } else if (type.equals(ClientboundGameEventPacket.DEMO_EVENT)) {
+            return GameStateChangePacket.DEMO_EVENT;
+        } else if (type.equals(ClientboundGameEventPacket.ARROW_HIT_PLAYER)) {
+            return GameStateChangePacket.ARROW_HIT_PLAYER;
+        } else if (type.equals(ClientboundGameEventPacket.RAIN_LEVEL_CHANGE)) {
+            return GameStateChangePacket.RAIN_LEVEL_CHANGE;
+        } else if (type.equals(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE)) {
+            return GameStateChangePacket.THUNDER_LEVEL_CHANGE;
+        } else if (type.equals(ClientboundGameEventPacket.PUFFER_FISH_STING)) {
+            return GameStateChangePacket.PUFFER_FISH_STING;
+        } else if (type.equals(ClientboundGameEventPacket.GUARDIAN_ELDER_EFFECT)) {
+            return GameStateChangePacket.GUARDIAN_ELDER_EFFECT;
+        } else if (type.equals(ClientboundGameEventPacket.IMMEDIATE_RESPAWN)) {
+            return GameStateChangePacket.IMMEDIATE_RESPAWN;
+        } else throw new IllegalStateException("Unmapped game event type");
+    }
+
+    @Nonnull
     public static ClientboundPlayerInfoPacket.Action wrap(@Nonnull PlayerInfoPacket.Action action) {
         return switch (action) {
             case ADD_PLAYER -> ClientboundPlayerInfoPacket.Action.ADD_PLAYER;
@@ -82,6 +113,48 @@ public final class NMSHelper {
             case UPDATE_GAME_MODE -> ClientboundPlayerInfoPacket.Action.UPDATE_GAME_MODE;
             case UPDATE_DISPLAY_NAME -> ClientboundPlayerInfoPacket.Action.UPDATE_DISPLAY_NAME;
         };
+    }
+
+    @Nonnull
+    public static SoundSource wrap(@Nonnull SoundCategory category) {
+        return switch (category) {
+            case MASTER -> SoundSource.MASTER;
+            case MUSIC -> SoundSource.MUSIC;
+            case RECORDS -> SoundSource.RECORDS;
+            case WEATHER -> SoundSource.WEATHER;
+            case BLOCKS -> SoundSource.BLOCKS;
+            case HOSTILE -> SoundSource.HOSTILE;
+            case NEUTRAL -> SoundSource.NEUTRAL;
+            case PLAYERS -> SoundSource.PLAYERS;
+            case AMBIENT -> SoundSource.AMBIENT;
+            case VOICE -> SoundSource.VOICE;
+        };
+    }
+
+    @Nullable
+    public static SoundSource nullable(@Nullable SoundCategory category) {
+        return category != null ? wrap(category) : null;
+    }
+
+    @Nonnull
+    public static SoundCategory wrap(@Nonnull SoundSource source) {
+        return switch (source) {
+            case MASTER -> SoundCategory.MASTER;
+            case MUSIC -> SoundCategory.MUSIC;
+            case RECORDS -> SoundCategory.RECORDS;
+            case WEATHER -> SoundCategory.WEATHER;
+            case BLOCKS -> SoundCategory.BLOCKS;
+            case HOSTILE -> SoundCategory.HOSTILE;
+            case NEUTRAL -> SoundCategory.NEUTRAL;
+            case PLAYERS -> SoundCategory.PLAYERS;
+            case AMBIENT -> SoundCategory.AMBIENT;
+            case VOICE -> SoundCategory.VOICE;
+        };
+    }
+
+    @Nullable
+    public static SoundCategory nullable(@Nullable SoundSource source) {
+        return source != null ? wrap(source) : null;
     }
 
     @Nonnull

@@ -11,7 +11,6 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.phys.Vec3;
 import net.nonswag.core.api.logger.Logger;
 import net.nonswag.tnl.listener.api.border.VirtualBorder;
@@ -21,11 +20,13 @@ import net.nonswag.tnl.listener.api.location.BlockLocation;
 import net.nonswag.tnl.listener.api.location.Position;
 import net.nonswag.tnl.listener.api.mapper.Mapping;
 import net.nonswag.tnl.listener.api.packets.outgoing.*;
+import net.nonswag.tnl.listener.api.player.Hand;
 import net.nonswag.tnl.listener.api.player.TNLPlayer;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.SoundCategory;
 import org.bukkit.boss.BossBar;
-import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_19_R1.boss.CraftBossBar;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftHumanEntity;
@@ -48,6 +49,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.nullable;
 import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.wrap;
 
 public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing {
@@ -56,7 +58,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public BlockBreakAnimationPacket blockBreakAnimationPacket(@Nonnull BlockLocation location, int state) {
         return new BlockBreakAnimationPacket(location, state) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundBlockDestructionPacket build() {
                 return new ClientboundBlockDestructionPacket(getLocation().getBlock().hashCode(), wrap(getLocation()), getState());
@@ -64,11 +66,11 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
         };
     }
 
-    @NotNull
+    @Nonnull
     @Override
     public SetExperiencePacket setExperiencePacket(float experienceProgress, int totalExperience, int experienceLevel) {
         return new SetExperiencePacket(experienceProgress, totalExperience, experienceLevel) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundSetExperiencePacket build() {
                 return new ClientboundSetExperiencePacket(getExperienceProgress(), getTotalExperience(), getExperienceLevel());
@@ -78,9 +80,21 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
 
     @Nonnull
     @Override
+    public StopSoundPacket stopSoundPacket(@Nullable NamespacedKey sound, @Nullable SoundCategory category) {
+        return new StopSoundPacket(sound, category) {
+            @Nonnull
+            @Override
+            public ClientboundStopSoundPacket build() {
+                return new ClientboundStopSoundPacket(nullable(getSound()), nullable(getCategory()));
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
     public BossBarPacket bossBarPacket(@Nonnull BossBarPacket.Action action, @Nonnull BossBar bossBar) {
         return new BossBarPacket(action, bossBar) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundBossEventPacket build() {
                 return switch (getAction()) {
@@ -99,7 +113,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public CameraPacket cameraPacket(int targetId) {
         return new CameraPacket(targetId) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundSetCameraPacket build() {
                 FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
@@ -113,7 +127,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public ChatPacket chatPacket(@Nonnull String message, @Nonnull ChatPacket.Type type, @Nonnull UUID sender) {
         return new ChatPacket(message, type, sender) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundSystemChatPacket build() {
                 return new ClientboundSystemChatPacket(Component.nullToEmpty(getMessage()), false);
@@ -125,7 +139,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public CloseWindowPacket closeWindowPacket(int windowId) {
         return new CloseWindowPacket(windowId) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundContainerClosePacket build() {
                 return new ClientboundContainerClosePacket(getWindowId());
@@ -137,7 +151,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public CooldownPacket cooldownPacket(@Nonnull Material item, int cooldown) {
         return new CooldownPacket(item, cooldown) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundCooldownPacket build() {
                 return new ClientboundCooldownPacket(CraftMagicNumbers.getItem(getItem()), getCooldown());
@@ -149,7 +163,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public CustomPayloadPacket customPayloadPacket(@Nonnull String channel, @Nonnull byte[]... bytes) {
         return new CustomPayloadPacket(channel, bytes) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundCustomPayloadPacket build() {
                 return new ClientboundCustomPayloadPacket(new ResourceLocation(getChannel()), new FriendlyByteBuf(Unpooled.wrappedBuffer(getBytes())));
@@ -161,7 +175,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public AnimationPacket animationPacket(int entityId, @Nonnull AnimationPacket.Animation animation) {
         return new AnimationPacket(entityId, animation) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundAnimatePacket build() {
                 FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
@@ -176,7 +190,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public EntityAttachPacket entityAttachPacket(int holderId, int leashedId) {
         return new EntityAttachPacket(holderId, leashedId) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundSetEntityLinkPacket build() {
                 FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
@@ -191,7 +205,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public EntityDestroyPacket entityDestroyPacket(int... destroyIds) {
         return new EntityDestroyPacket() {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundRemoveEntitiesPacket build() {
                 return new ClientboundRemoveEntitiesPacket(getDestroyIds());
@@ -203,7 +217,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public EntityEquipmentPacket entityEquipmentPacket(int entityId, @Nonnull HashMap<SlotType, TNLItem> equipment) {
         return new EntityEquipmentPacket(entityId, equipment) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundSetEquipmentPacket build() {
                 List<Pair<EquipmentSlot, net.minecraft.world.item.ItemStack>> equipment = new ArrayList<>();
@@ -217,7 +231,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public GameStateChangePacket gameStateChangePacket(@Nonnull GameStateChangePacket.Identifier identifier, float state) {
         return new GameStateChangePacket(identifier, state) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundGameEventPacket build() {
                 return new ClientboundGameEventPacket(wrap(getIdentifier()), getState());
@@ -229,7 +243,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public EntityStatusPacket entityStatusPacket(int entityId, @Nonnull EntityStatusPacket.Status status) {
         return new EntityStatusPacket(entityId, status) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundEntityEventPacket build() {
                 FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
@@ -244,7 +258,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public EntitySpawnPacket entitySpawnPacket(@Nonnull Entity entity) {
         return new EntitySpawnPacket(entity) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundAddEntityPacket build() {
                 return new ClientboundAddEntityPacket(((CraftEntity) getEntity()).getHandle());
@@ -256,7 +270,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public <W> EntityMetadataPacket<W> entityMetadataPacket(int entityId, @Nonnull W dataWatcher, boolean updateAll) {
         return new EntityMetadataPacket<>(entityId, dataWatcher, updateAll) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundSetEntityDataPacket build() {
                 return new ClientboundSetEntityDataPacket(getEntityId(), (SynchedEntityData) getMetadata(), isUpdateAll());
@@ -274,7 +288,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public EntityHeadRotationPacket entityHeadRotationPacket(int entityId, float yaw) {
         return new EntityHeadRotationPacket(entityId, yaw) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundRotateHeadPacket build() {
                 FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
@@ -295,7 +309,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public EntityTeleportPacket entityTeleportPacket(int entityId, @Nonnull Position position) {
         return new EntityTeleportPacket(entityId, position) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundTeleportEntityPacket build() {
                 FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
@@ -315,7 +329,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public EntityVelocityPacket entityVelocityPacket(int entityId, @Nonnull Vector vector) {
         return new EntityVelocityPacket(entityId, vector) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundSetEntityMotionPacket build() {
                 Vec3 velocity = new Vec3(getVector().getX(), getVector().getY(), getVector().getZ());
@@ -328,7 +342,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public LivingEntitySpawnPacket livingEntitySpawnPacket(@Nonnull LivingEntity entity) {
         return new LivingEntitySpawnPacket(entity) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundAddEntityPacket build() {
                 return new ClientboundAddEntityPacket(((CraftLivingEntity) getEntity()).getHandle());
@@ -346,7 +360,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public MountPacket mountPacket(int holderId, int[] mounts) {
         return new MountPacket(holderId, mounts) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundSetPassengersPacket build() {
                 FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
@@ -361,7 +375,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public NamedEntitySpawnPacket namedEntitySpawnPacket(@Nonnull HumanEntity human) {
         return new NamedEntitySpawnPacket(human) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundAddPlayerPacket build() {
                 return new ClientboundAddPlayerPacket(((CraftHumanEntity) getHuman()).getHandle());
@@ -373,7 +387,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public OpenSignPacket openSignPacket(@Nonnull BlockLocation location) {
         return new OpenSignPacket(location) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundOpenSignEditorPacket build() {
                 return new ClientboundOpenSignEditorPacket(wrap(getLocation()));
@@ -383,9 +397,39 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
 
     @Nonnull
     @Override
+    public OpenBookPacket openBookPacket(@Nonnull Hand hand) {
+        return new OpenBookPacket(hand) {
+            @Nonnull
+            @Override
+            public ClientboundOpenBookPacket build() {
+                return new ClientboundOpenBookPacket(wrap(getHand()));
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public MoveVehiclePacket moveVehiclePacket(@Nonnull Position position) {
+        return new MoveVehiclePacket(position) {
+            @Nonnull
+            @Override
+            public ClientboundMoveVehiclePacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeDouble(getPosition().getX());
+                buffer.writeDouble(getPosition().getY());
+                buffer.writeDouble(getPosition().getZ());
+                buffer.writeFloat(getPosition().getYaw());
+                buffer.writeFloat(getPosition().getPitch());
+                return new ClientboundMoveVehiclePacket(buffer);
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
     public OpenWindowPacket openWindowPacket(int windowId, @Nonnull OpenWindowPacket.Type type, @Nonnull String title) {
         return new OpenWindowPacket(windowId, type, title) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundOpenScreenPacket build() {
                 return new ClientboundOpenScreenPacket(getWindowId(), wrap(getType()), Component.literal(getTitle()));
@@ -397,7 +441,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public PlayerInfoPacket playerInfoPacket(@Nonnull Player player, @Nonnull PlayerInfoPacket.Action action) {
         return new PlayerInfoPacket(player, action) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundPlayerInfoPacket build() {
                 return new ClientboundPlayerInfoPacket(wrap(getAction()), ((CraftPlayer) getPlayer()).getHandle());
@@ -409,7 +453,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public SetSlotPacket setSlotPacket(@Nonnull SetSlotPacket.Inventory inventory, int slot, @Nullable ItemStack itemStack) {
         return new SetSlotPacket(inventory, slot, itemStack) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundContainerSetSlotPacket build() {
                 return new ClientboundContainerSetSlotPacket(getInventory().getId(), 0, getSlot(), CraftItemStack.asNMSCopy(getItemStack()));
@@ -421,7 +465,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public TitlePacket titlePacket(@Nonnull TitlePacket.Action action, @Nullable String text, int timeIn, int timeStay, int timeOut) {
         return new TitlePacket(action, text, timeIn, timeStay, timeOut) {
-            @NotNull
+            @Nonnull
             @Override
             public Packet<ClientGamePacketListener> build() {
                 return switch (getAction()) {
@@ -440,7 +484,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public UpdateTimePacket updateTimePacket(long age, long timestamp, boolean cycle) {
         return new UpdateTimePacket(age, timestamp, cycle) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundSetTimePacket build() {
                 return new ClientboundSetTimePacket(getAge(), getTimestamp(), isCycle());
@@ -452,7 +496,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public WindowDataPacket windowDataPacket(int windowId, int property, int value) {
         return new WindowDataPacket(windowId, property, value) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundContainerSetDataPacket build() {
                 return new ClientboundContainerSetDataPacket(getWindowId(), getProperty(), getValue());
@@ -464,7 +508,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public WindowItemsPacket windowItemsPacket(int windowId, @Nonnull List<ItemStack> items) {
         return new WindowItemsPacket(windowId, items) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundContainerSetContentPacket build() {
                 NonNullList<net.minecraft.world.item.ItemStack> items = NonNullList.create();
@@ -476,27 +520,118 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
 
     @Nonnull
     @Override
-    public WorldBorderPacket worldBorderPacket(@Nonnull VirtualBorder virtualBorder, @Nonnull WorldBorderPacket.Action action) {
-        return new WorldBorderPacket(virtualBorder, action) {
+    public InitializeBorderPacket initializeBorderPacket(@Nonnull VirtualBorder virtualBorder) {
+        return new InitializeBorderPacket(virtualBorder) {
+            @Nonnull
+            @Override
+            public ClientboundInitializeBorderPacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeDouble(virtualBorder.getCenter().x());
+                buffer.writeDouble(virtualBorder.getCenter().z());
+                buffer.writeDouble(virtualBorder.getOldSize());
+                buffer.writeDouble(virtualBorder.getNewSize());
+                buffer.writeVarLong(virtualBorder.getLerpTime());
+                buffer.writeVarInt(VirtualBorder.MAX_SIZE);
+                buffer.writeVarInt(virtualBorder.getWarningDistance());
+                buffer.writeVarInt(virtualBorder.getWarningDelay());
+                return new ClientboundInitializeBorderPacket(buffer);
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public SetBorderSizePacket setBorderSizePacket(double size) {
+        return new SetBorderSizePacket(size) {
+            @Nonnull
+            @Override
+            public ClientboundSetBorderSizePacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeDouble(getSize());
+                return new ClientboundSetBorderSizePacket(buffer);
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public SetBorderLerpSizePacket setBorderLerpSizePacket(double oldSize, double newSize, long lerpTime) {
+        return new SetBorderLerpSizePacket(oldSize, newSize, lerpTime) {
+            @Nonnull
+            @Override
+            public ClientboundSetBorderLerpSizePacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeDouble(getOldSize());
+                buffer.writeDouble(getNewSize());
+                buffer.writeVarLong(getLerpTime());
+                return new ClientboundSetBorderLerpSizePacket(buffer);
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public SetBorderCenterPacket setBorderCenterPacket(@Nonnull VirtualBorder.Center center) {
+        return new SetBorderCenterPacket(center) {
+            @Nonnull
+            @Override
+            public ClientboundSetBorderCenterPacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeDouble(getCenter().x());
+                buffer.writeDouble(getCenter().z());
+                return new ClientboundSetBorderCenterPacket(buffer);
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public SetBorderWarningDelayPacket setBorderWarningDelayPacket(int warningDelay) {
+        return new SetBorderWarningDelayPacket(warningDelay) {
+            @Nonnull
+            @Override
+            public ClientboundSetBorderWarningDelayPacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeVarInt(getWarningDelay());
+                return new ClientboundSetBorderWarningDelayPacket(buffer);
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public SetBorderWarningDistancePacket setBorderWarningDistancePacket(int warningDistance) {
+        return new SetBorderWarningDistancePacket(warningDistance) {
+            @Nonnull
+            @Override
+            public ClientboundSetBorderWarningDistancePacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeVarInt(getWarningDistance());
+                return new ClientboundSetBorderWarningDistancePacket(buffer);
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public SelectAdvancementsTabPacket selectAdvancementsTabPacket(@Nullable NamespacedKey tab) {
+        return new SelectAdvancementsTabPacket(tab) {
+            @Nonnull
+            @Override
+            public ClientboundSelectAdvancementsTabPacket build() {
+                return new ClientboundSelectAdvancementsTabPacket(nullable(tab));
+            }
+        };
+    }
+
+    @NotNull
+    @Override
+    public SetDisplayChatPreviewPacket setDisplayChatPreviewPacket(boolean enabled) {
+        return new SetDisplayChatPreviewPacket(enabled) {
             @NotNull
             @Override
-            public Packet<ClientGamePacketListener> build() {
-                WorldBorder worldBorder = new WorldBorder();
-                worldBorder.world = ((CraftWorld) getBorder().getWorld()).getHandle();
-                worldBorder.setWarningBlocks(getBorder().getWarningDistance());
-                worldBorder.setSize(getBorder().getSize());
-                worldBorder.setCenter(getBorder().getCenter().x(), getBorder().getCenter().z());
-                worldBorder.setDamagePerBlock(getBorder().getDamageAmount());
-                worldBorder.setDamageSafeZone(getBorder().getDamageBuffer());
-                worldBorder.setWarningTime(getBorder().getWarningTime());
-                return switch (getAction()) {
-                    case SET_SIZE -> new ClientboundSetBorderSizePacket(worldBorder);
-                    case LERP_SIZE -> new ClientboundSetBorderLerpSizePacket(worldBorder);
-                    case SET_CENTER -> new ClientboundSetBorderCenterPacket(worldBorder);
-                    case INITIALIZE -> new ClientboundInitializeBorderPacket(worldBorder);
-                    case SET_WARNING_TIME -> new ClientboundSetBorderWarningDelayPacket(worldBorder);
-                    case SET_WARNING_BLOCKS -> new ClientboundSetBorderWarningDistancePacket(worldBorder);
-                };
+            public ClientboundSetDisplayChatPreviewPacket build() {
+                return new ClientboundSetDisplayChatPreviewPacket(isEnabled());
             }
         };
     }
@@ -505,7 +640,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public ResourcePackPacket resourcePackPacket(@Nonnull String url, @Nullable String hash, @Nullable String prompt, boolean required) {
         return new ResourcePackPacket(url, hash, prompt, required) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundResourcePackPacket build() {
                 return new ClientboundResourcePackPacket(getUrl(), String.valueOf(getHash()), isRequired(), getPrompt() != null ? Component.literal(getPrompt()) : null);
@@ -517,7 +652,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public ItemTakePacket itemTakePacket(int itemId, int collectorId, int amount) {
         return new ItemTakePacket(itemId, collectorId, amount) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundTakeItemEntityPacket build() {
                 return new ClientboundTakeItemEntityPacket(getItemId(), getCollectorId(), getAmount());
@@ -529,19 +664,35 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
     @Override
     public <P> PacketBuilder map(@Nonnull P packet) {
         if (packet instanceof ClientboundInitializeBorderPacket instance) {
+            VirtualBorder border = new VirtualBorder(new VirtualBorder.Center(instance.getNewCenterX(), instance.getNewCenterZ()));
+            border.setOldSize(instance.getOldSize());
+            border.setNewSize(instance.getNewSize());
+            border.setLerpTime(instance.getLerpTime());
+            border.setWarningDistance(instance.getWarningBlocks());
+            border.setWarningDelay(instance.getWarningTime());
+            return InitializeBorderPacket.create(border);
         } else if (packet instanceof ClientboundAnimatePacket instance) {
             return AnimationPacket.create(instance.getId(), AnimationPacket.Animation.values()[instance.getAction()]);
         } else if (packet instanceof ClientboundSetExperiencePacket instance) {
             return SetExperiencePacket.create(instance.getExperienceProgress(), instance.getTotalExperience(), instance.getExperienceLevel());
         } else if (packet instanceof ClientboundCommandSuggestionsPacket instance) {
         } else if (packet instanceof ClientboundSelectAdvancementsTabPacket instance) {
+            return SelectAdvancementsTabPacket.create(nullable(instance.getTab()));
         } else if (packet instanceof ClientboundSetDisplayChatPreviewPacket instance) {
+            return SetDisplayChatPreviewPacket.create(instance.enabled());
         } else if (packet instanceof ClientboundHorseScreenOpenPacket instance) {
         } else if (packet instanceof ClientboundMoveVehiclePacket instance) {
+            return MoveVehiclePacket.create(new Position(instance.getX(), instance.getY(), instance.getZ(), instance.getYRot(), instance.getXRot()));
         } else if (packet instanceof ClientboundSetCameraPacket instance) {
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            instance.write(buffer);
+            return CameraPacket.create(buffer.readVarInt());
         } else if (packet instanceof ClientboundGameEventPacket instance) {
+            return GameStateChangePacket.create(wrap(instance.getEvent()), instance.getParam());
         } else if (packet instanceof ClientboundStopSoundPacket instance) {
+            return StopSoundPacket.create(nullable(instance.getName()), nullable(instance.getSource()));
         } else if (packet instanceof ClientboundOpenBookPacket instance) {
+            return OpenBookPacket.create(wrap(instance.getHand()));
         } else if (packet instanceof ClientboundLightUpdatePacket instance) {
         } else if (packet instanceof ClientboundSetCarriedItemPacket instance) {
         } else if (packet instanceof ClientboundSetDisplayObjectivePacket instance) {
@@ -571,10 +722,12 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
         } else if (packet instanceof ClientboundOpenSignEditorPacket instance) {
         } else if (packet instanceof ClientboundBlockChangedAckPacket instance) {
         } else if (packet instanceof ClientboundSetBorderCenterPacket instance) {
+            return SetBorderCenterPacket.create(new VirtualBorder.Center(instance.getNewCenterX(), instance.getNewCenterZ()));
         } else if (packet instanceof ClientboundAddExperienceOrbPacket instance) {
         } else if (packet instanceof ClientboundMerchantOffersPacket instance) {
         } else if (packet instanceof ClientboundRemoveEntitiesPacket instance) {
         } else if (packet instanceof ClientboundSetBorderWarningDistancePacket instance) {
+            return SetBorderWarningDistancePacket.create(instance.getWarningBlocks());
         } else if (packet instanceof ClientboundSetSubtitleTextPacket instance) {
         } else if (packet instanceof ClientboundBlockEntityDataPacket instance) {
         } else if (packet instanceof ClientboundUpdateAttributesPacket instance) {
@@ -609,8 +762,10 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
         } else if (packet instanceof ClientboundContainerSetDataPacket instance) {
         } else if (packet instanceof ClientboundSetEntityMotionPacket instance) {
         } else if (packet instanceof ClientboundSetBorderSizePacket instance) {
+            return SetBorderSizePacket.create(instance.getSize());
         } else if (packet instanceof ClientboundPlayerChatPacket instance) {
         } else if (packet instanceof ClientboundSetBorderWarningDelayPacket instance) {
+            return SetBorderWarningDelayPacket.create(instance.getWarningDelay());
         } else if (packet instanceof ClientboundTabListPacket instance) {
         } else if (packet instanceof ClientboundChangeDifficultyPacket instance) {
         } else if (packet instanceof ClientboundKeepAlivePacket instance) {
@@ -630,6 +785,7 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
         } else if (packet instanceof ClientboundLevelEventPacket instance) {
         } else if (packet instanceof ClientboundUpdateMobEffectPacket instance) {
         } else if (packet instanceof ClientboundSetBorderLerpSizePacket instance) {
+            return SetBorderLerpSizePacket.create(instance.getOldSize(), instance.getNewSize(), instance.getLerpTime());
         } else if (packet instanceof ClientboundUpdateAdvancementsPacket instance) {
         } else if (packet instanceof ClientboundRemoveMobEffectPacket instance) {
         } else if (packet instanceof ClientboundSetHealthPacket instance) {
