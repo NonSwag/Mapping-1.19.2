@@ -1,5 +1,9 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.wrapper;
 
+import com.mojang.brigadier.Message;
+import com.mojang.brigadier.context.StringRange;
+import com.mojang.brigadier.suggestion.Suggestion;
+import com.mojang.brigadier.suggestion.Suggestions;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.commands.arguments.ArgumentSignatures;
@@ -25,6 +29,7 @@ import net.nonswag.tnl.listener.api.location.BlockPosition;
 import net.nonswag.tnl.listener.api.packets.incoming.ChatCommandPacket;
 import net.nonswag.tnl.listener.api.packets.incoming.SetBeaconPacket;
 import net.nonswag.tnl.listener.api.packets.incoming.UseItemOnPacket;
+import net.nonswag.tnl.listener.api.packets.outgoing.CommandSuggestionsPacket;
 import net.nonswag.tnl.listener.api.packets.outgoing.GameStateChangePacket;
 import net.nonswag.tnl.listener.api.packets.outgoing.OpenWindowPacket;
 import net.nonswag.tnl.listener.api.packets.outgoing.PlayerInfoPacket;
@@ -155,6 +160,60 @@ public final class NMSHelper {
     @Nullable
     public static SoundCategory nullable(@Nullable SoundSource source) {
         return source != null ? wrap(source) : null;
+    }
+
+    @Nonnull
+    public static CommandSuggestionsPacket.Suggestions wrap(@Nonnull Suggestions suggestions) {
+        List<CommandSuggestionsPacket.Suggestion> list = new ArrayList<>();
+        suggestions.getList().forEach(suggestion -> list.add(wrap(suggestion)));
+        return new CommandSuggestionsPacket.Suggestions(wrap(suggestions.getRange()), list);
+    }
+
+    @Nonnull
+    public static CommandSuggestionsPacket.StringRange wrap(@Nonnull StringRange range) {
+        return new CommandSuggestionsPacket.StringRange(range.getStart(), range.getEnd());
+    }
+
+    @Nonnull
+    public static CommandSuggestionsPacket.Suggestion wrap(@Nonnull Suggestion suggestion) {
+        return new CommandSuggestionsPacket.Suggestion(wrap(suggestion.getRange()), suggestion.getText(), nullable(suggestion.getTooltip()));
+    }
+
+    @Nonnull
+    public static CommandSuggestionsPacket.Tooltip wrap(@Nonnull Message message) {
+        return message::getString;
+    }
+
+    @Nullable
+    public static CommandSuggestionsPacket.Tooltip nullable(@Nullable Message message) {
+        return message != null ? wrap(message) : null;
+    }
+
+    @Nonnull
+    public static Suggestions wrap(@Nonnull CommandSuggestionsPacket.Suggestions suggestions) {
+        List<Suggestion> list = new ArrayList<>();
+        suggestions.getSuggestions().forEach(suggestion -> list.add(wrap(suggestion)));
+        return new Suggestions(wrap(suggestions.getRange()), list);
+    }
+
+    @Nonnull
+    public static StringRange wrap(@Nonnull CommandSuggestionsPacket.StringRange range) {
+        return new StringRange(range.start(), range.end());
+    }
+
+    @Nonnull
+    public static Suggestion wrap(@Nonnull CommandSuggestionsPacket.Suggestion suggestion) {
+        return new Suggestion(wrap(suggestion.getRange()), suggestion.getText(), nullable(suggestion.getTooltip()));
+    }
+
+    @Nonnull
+    public static Message wrap(@Nonnull CommandSuggestionsPacket.Tooltip tooltip) {
+        return tooltip::getMessage;
+    }
+
+    @Nullable
+    public static Message nullable(@Nullable CommandSuggestionsPacket.Tooltip tooltip) {
+        return tooltip != null ? wrap(tooltip) : null;
     }
 
     @Nonnull

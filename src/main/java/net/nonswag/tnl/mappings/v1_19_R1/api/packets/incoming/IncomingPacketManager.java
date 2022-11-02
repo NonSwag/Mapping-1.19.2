@@ -36,7 +36,7 @@ import java.util.UUID;
 import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.nullable;
 import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.wrap;
 
-public class IncomingPacketManager extends Mapping.PacketManager.Incoming {
+public class IncomingPacketManager implements Mapping.PacketManager.Incoming {
 
     @Nonnull
     @Override

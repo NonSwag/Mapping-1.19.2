@@ -40,7 +40,6 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
-import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -52,7 +51,7 @@ import java.util.UUID;
 import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.nullable;
 import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.wrap;
 
-public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing {
+public final class OutgoingPacketManager implements Mapping.PacketManager.Outgoing {
 
     @Nonnull
     @Override
@@ -624,11 +623,35 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
         };
     }
 
-    @NotNull
+    @Nonnull
+    @Override
+    public HorseScreenOpenPacket horseScreenOpenPacket(int containerId, int size, int entityId) {
+        return new HorseScreenOpenPacket(containerId, size, entityId) {
+            @Nonnull
+            @Override
+            public ClientboundHorseScreenOpenPacket build() {
+                return new ClientboundHorseScreenOpenPacket(getContainerId(), getSize(), getEntityId());
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public CommandSuggestionsPacket commandSuggestionsPacket(int completionId, @Nonnull CommandSuggestionsPacket.Suggestions suggestions) {
+        return new CommandSuggestionsPacket(completionId, suggestions) {
+            @Nonnull
+            @Override
+            public ClientboundCommandSuggestionsPacket build() {
+                return new ClientboundCommandSuggestionsPacket(getCompletionId(), wrap(getSuggestions()));
+            }
+        };
+    }
+
+    @Nonnull
     @Override
     public SetDisplayChatPreviewPacket setDisplayChatPreviewPacket(boolean enabled) {
         return new SetDisplayChatPreviewPacket(enabled) {
-            @NotNull
+            @Nonnull
             @Override
             public ClientboundSetDisplayChatPreviewPacket build() {
                 return new ClientboundSetDisplayChatPreviewPacket(isEnabled());
@@ -676,11 +699,13 @@ public final class OutgoingPacketManager extends Mapping.PacketManager.Outgoing 
         } else if (packet instanceof ClientboundSetExperiencePacket instance) {
             return SetExperiencePacket.create(instance.getExperienceProgress(), instance.getTotalExperience(), instance.getExperienceLevel());
         } else if (packet instanceof ClientboundCommandSuggestionsPacket instance) {
+            return CommandSuggestionsPacket.create(instance.getId(), wrap(instance.getSuggestions()));
         } else if (packet instanceof ClientboundSelectAdvancementsTabPacket instance) {
             return SelectAdvancementsTabPacket.create(nullable(instance.getTab()));
         } else if (packet instanceof ClientboundSetDisplayChatPreviewPacket instance) {
             return SetDisplayChatPreviewPacket.create(instance.enabled());
         } else if (packet instanceof ClientboundHorseScreenOpenPacket instance) {
+            return HorseScreenOpenPacket.create(instance.getContainerId(), instance.getSize(), instance.getEntityId());
         } else if (packet instanceof ClientboundMoveVehiclePacket instance) {
             return MoveVehiclePacket.create(new Position(instance.getX(), instance.getY(), instance.getZ(), instance.getYRot(), instance.getXRot()));
         } else if (packet instanceof ClientboundSetCameraPacket instance) {
