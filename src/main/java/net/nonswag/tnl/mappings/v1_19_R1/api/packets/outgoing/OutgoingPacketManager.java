@@ -55,6 +55,45 @@ public final class OutgoingPacketManager implements Mapping.PacketManager.Outgoi
 
     @Nonnull
     @Override
+    public SetSimulationDistancePacket setSimulationDistancePacket(int simulationDistance) {
+        return new SetSimulationDistancePacket(simulationDistance) {
+            @Nonnull
+            @Override
+            public ClientboundSetSimulationDistancePacket build() {
+                return new ClientboundSetSimulationDistancePacket(getSimulationDistance());
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public SetCarriedItemPacket setCarriedItemPacket(int slot) {
+        return new SetCarriedItemPacket(slot) {
+            @Nonnull
+            @Override
+            public ClientboundSetCarriedItemPacket build() {
+                return new ClientboundSetCarriedItemPacket(getSlot());
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public SetDisplayObjectivePacket setDisplayObjectivePacket(int slot, @Nullable String objectiveName) {
+        return new SetDisplayObjectivePacket(slot, objectiveName) {
+            @Nonnull
+            @Override
+            public ClientboundSetDisplayObjectivePacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeByte(getSlot());
+                buffer.writeUtf(getObjectiveName() != null ? getObjectiveName() : "");
+                return new ClientboundSetDisplayObjectivePacket(buffer);
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
     public BlockBreakAnimationPacket blockBreakAnimationPacket(@Nonnull BlockLocation location, int state) {
         return new BlockBreakAnimationPacket(location, state) {
             @Nonnull
@@ -720,12 +759,16 @@ public final class OutgoingPacketManager implements Mapping.PacketManager.Outgoi
             return OpenBookPacket.create(wrap(instance.getHand()));
         } else if (packet instanceof ClientboundLightUpdatePacket instance) {
         } else if (packet instanceof ClientboundSetCarriedItemPacket instance) {
+            return SetCarriedItemPacket.create(instance.getSlot());
         } else if (packet instanceof ClientboundSetDisplayObjectivePacket instance) {
+            return SetDisplayObjectivePacket.create(instance.getSlot(), instance.getObjectiveName());
         } else if (packet instanceof ClientboundSetTimePacket instance) {
+            return UpdateTimePacket.create(instance.getGameTime(), instance.getDayTime(), instance.getDayTime() < 0);
         } else if (packet instanceof ClientboundContainerSetContentPacket instance) {
         } else if (packet instanceof ClientboundSetPlayerTeamPacket instance) {
         } else if (packet instanceof ClientboundUpdateTagsPacket instance) {
         } else if (packet instanceof ClientboundSetSimulationDistancePacket instance) {
+            return SetSimulationDistancePacket.create(instance.simulationDistance());
         } else if (packet instanceof ClientboundChatPreviewPacket instance) {
         } else if (packet instanceof ClientboundLevelChunkPacketData instance) {
         } else if (packet instanceof ClientboundTagQueryPacket instance) {
