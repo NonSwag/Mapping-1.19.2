@@ -6,38 +6,43 @@ import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.suggestion.Suggestions;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.arguments.ArgumentSignatures;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.LastSeenMessages;
 import net.minecraft.network.chat.MessageSignature;
 import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
+import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.nonswag.tnl.listener.api.item.SlotType;
 import net.nonswag.tnl.listener.api.item.TNLItem;
 import net.nonswag.tnl.listener.api.location.BlockPosition;
+import net.nonswag.tnl.listener.api.nbt.NBTTag;
 import net.nonswag.tnl.listener.api.packets.incoming.ChatCommandPacket;
 import net.nonswag.tnl.listener.api.packets.incoming.SetBeaconPacket;
 import net.nonswag.tnl.listener.api.packets.incoming.UseItemOnPacket;
-import net.nonswag.tnl.listener.api.packets.outgoing.CommandSuggestionsPacket;
-import net.nonswag.tnl.listener.api.packets.outgoing.GameStateChangePacket;
-import net.nonswag.tnl.listener.api.packets.outgoing.OpenWindowPacket;
-import net.nonswag.tnl.listener.api.packets.outgoing.PlayerInfoPacket;
+import net.nonswag.tnl.listener.api.packets.outgoing.*;
 import net.nonswag.tnl.listener.api.player.Hand;
+import net.nonswag.tnl.mappings.v1_19_R1.api.nbt.NBT;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.SoundCategory;
 import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_19_R1.util.CraftChatMessage;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nonnull;
@@ -48,6 +53,49 @@ import java.util.List;
 import java.util.Optional;
 
 public final class NMSHelper {
+
+    @Nonnull
+    public static NBTTag wrap(@Nonnull CompoundTag tag) {
+        return new NBT(tag);
+    }
+
+    @Nullable
+    public static NBTTag nullable(@Nullable CompoundTag tag) {
+        return tag != null ? wrap(tag) : null;
+    }
+
+    @Nonnull
+    public static ChatColor wrap(@Nonnull ChatFormatting formatting) {
+        return CraftChatMessage.getColor(formatting);
+    }
+
+    @Nonnull
+    public static ChatFormatting wrap(@Nonnull ChatColor color) {
+        return CraftChatMessage.getColor(color);
+    }
+
+    @Nonnull
+    public static SetPlayerTeamPacket.Parameters wrap(@Nonnull ClientboundSetPlayerTeamPacket.Parameters parameters) {
+        SetPlayerTeamPacket.Parameters value = new SetPlayerTeamPacket.Parameters();
+        value.setDisplayName(parameters.getDisplayName().getString());
+        value.setNameTagVisibility(switch (parameters.getNametagVisibility()) {
+            case "never" -> SetPlayerTeamPacket.Parameters.Visibility.NEVER;
+            case "hideForOtherTeams" -> SetPlayerTeamPacket.Parameters.Visibility.HIDE_FOR_OTHER_TEAMS;
+            case "hideForOwnTeam" -> SetPlayerTeamPacket.Parameters.Visibility.HIDE_FOR_OWN_TEAM;
+            default -> SetPlayerTeamPacket.Parameters.Visibility.ALWAYS;
+        });
+        value.setCollisionRule(switch (parameters.getCollisionRule()) {
+            case "never" -> SetPlayerTeamPacket.Parameters.CollisionRule.NEVER;
+            case "pushOtherTeams" -> SetPlayerTeamPacket.Parameters.CollisionRule.PUSH_OTHER_TEAMS;
+            case "pushOwnTeam" -> SetPlayerTeamPacket.Parameters.CollisionRule.PUSH_OWN_TEAM;
+            default -> SetPlayerTeamPacket.Parameters.CollisionRule.ALWAYS;
+        });
+        value.setColor(wrap(parameters.getColor()));
+        value.setPrefix(parameters.getPlayerPrefix().getString());
+        value.setSuffix(parameters.getPlayerSuffix().getString());
+        value.unpackOptions(parameters.getOptions());
+        return value;
+    }
 
     @Nonnull
     public static EquipmentSlot wrap(@Nonnull SlotType type) {
@@ -252,8 +300,13 @@ public final class NMSHelper {
     }
 
     @Nonnull
-    public static net.minecraft.world.item.ItemStack wrap(@Nonnull TNLItem item) {
+    public static ItemStack wrap(@Nonnull TNLItem item) {
         return CraftItemStack.asNMSCopy(item);
+    }
+
+    @Nullable
+    public static ItemStack nullable(@Nullable TNLItem item) {
+        return item != null ? wrap(item) : null;
     }
 
     @Nullable
@@ -389,8 +442,13 @@ public final class NMSHelper {
     }
 
     @Nonnull
-    public static TNLItem wrap(@Nonnull net.minecraft.world.item.ItemStack item) {
+    public static TNLItem wrap(@Nonnull ItemStack item) {
         return TNLItem.create(CraftItemStack.asBukkitCopy(item));
+    }
+
+    @Nullable
+    public static TNLItem nullable(@Nullable ItemStack item) {
+        return item != null ? wrap(item) : null;
     }
 
     @Nonnull
@@ -404,15 +462,22 @@ public final class NMSHelper {
     }
 
     @Nonnull
-    public static HashMap<Integer, TNLItem> wrap(@Nonnull Int2ObjectMap<net.minecraft.world.item.ItemStack> changedSlots) {
+    public static HashMap<Integer, TNLItem> wrap(@Nonnull Int2ObjectMap<ItemStack> items) {
         HashMap<Integer, TNLItem> result = new HashMap<>();
-        changedSlots.forEach((integer, itemStack) -> result.put(integer, wrap(itemStack)));
+        items.forEach((integer, itemStack) -> result.put(integer, wrap(itemStack)));
         return result;
     }
 
     @Nonnull
-    public static Int2ObjectMap<net.minecraft.world.item.ItemStack> wrap(@Nonnull HashMap<Integer, TNLItem> changedSlots) {
-        Int2ObjectMap<net.minecraft.world.item.ItemStack> result = new Int2ObjectOpenHashMap<>();
+    public static List<TNLItem> wrap(@Nonnull List<ItemStack> items, int dummy) {
+        List<TNLItem> result = new ArrayList<>();
+        items.forEach(itemStack -> result.add(wrap(itemStack)));
+        return result;
+    }
+
+    @Nonnull
+    public static Int2ObjectMap<ItemStack> wrap(@Nonnull HashMap<Integer, TNLItem> changedSlots) {
+        Int2ObjectMap<ItemStack> result = new Int2ObjectOpenHashMap<>();
         changedSlots.forEach((integer, itemStack) -> result.put((int) integer, wrap(itemStack)));
         return result;
     }

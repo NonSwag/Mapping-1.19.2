@@ -6,7 +6,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.Logger;
 import org.apache.logging.log4j.core.filter.AbstractFilter;
-import org.apache.logging.log4j.core.filter.AbstractFilterable;
+import org.apache.logging.log4j.core.filter.Filterable;
 
 import javax.annotation.Nonnull;
 
@@ -16,7 +16,7 @@ public class NMSLogManager extends LogManager {
     public void initialize() {
         try {
             ((Logger) org.apache.logging.log4j.LogManager.getRootLogger()).getAppenders().values().forEach(appender -> {
-                if (!(appender instanceof AbstractFilterable filter)) return;
+                if (!(appender instanceof Filterable filter)) return;
                 filter.addFilter(LogRewriter.getInstance());
                 filter.addFilter(Filter.getInstance());
             });

@@ -17,8 +17,10 @@ import net.nonswag.tnl.listener.api.border.VirtualBorder;
 import net.nonswag.tnl.listener.api.item.SlotType;
 import net.nonswag.tnl.listener.api.item.TNLItem;
 import net.nonswag.tnl.listener.api.location.BlockLocation;
+import net.nonswag.tnl.listener.api.location.BlockPosition;
 import net.nonswag.tnl.listener.api.location.Position;
 import net.nonswag.tnl.listener.api.mapper.Mapping;
+import net.nonswag.tnl.listener.api.nbt.NBTTag;
 import net.nonswag.tnl.listener.api.packets.outgoing.*;
 import net.nonswag.tnl.listener.api.player.Hand;
 import net.nonswag.tnl.listener.api.player.TNLPlayer;
@@ -52,6 +54,18 @@ import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.nullable;
 import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.wrap;
 
 public final class OutgoingPacketManager implements Mapping.PacketManager.Outgoing {
+
+    @Nonnull
+    @Override
+    public ChatPreviewPacket chatPreviewPacket(int queryId, @Nullable String query) {
+        return new ChatPreviewPacket(queryId, query) {
+            @Nonnull
+            @Override
+            public ClientboundChatPreviewPacket build() {
+                return new ClientboundChatPreviewPacket(getQueryId(), getQuery() != null ? Component.literal(getQuery()) : null);
+            }
+        };
+    }
 
     @Nonnull
     @Override
@@ -94,12 +108,12 @@ public final class OutgoingPacketManager implements Mapping.PacketManager.Outgoi
 
     @Nonnull
     @Override
-    public BlockBreakAnimationPacket blockBreakAnimationPacket(@Nonnull BlockLocation location, int state) {
-        return new BlockBreakAnimationPacket(location, state) {
+    public BlockDestructionPacket blockDestructionPacket(int id, @Nonnull BlockPosition position, int state) {
+        return new BlockDestructionPacket(id, position, state) {
             @Nonnull
             @Override
             public ClientboundBlockDestructionPacket build() {
-                return new ClientboundBlockDestructionPacket(getLocation().getBlock().hashCode(), wrap(getLocation()), getState());
+                return new ClientboundBlockDestructionPacket(getId(), wrap(getPosition()), getState());
             }
         };
     }
@@ -544,14 +558,14 @@ public final class OutgoingPacketManager implements Mapping.PacketManager.Outgoi
 
     @Nonnull
     @Override
-    public WindowItemsPacket windowItemsPacket(int windowId, @Nonnull List<ItemStack> items) {
-        return new WindowItemsPacket(windowId, items) {
+    public ContainerSetContentPacket containerSetContentPacket(int containerId, int stateId, @Nonnull List<TNLItem> content, @Nonnull TNLItem cursor) {
+        return new ContainerSetContentPacket(containerId, stateId, content, cursor) {
             @Nonnull
             @Override
             public ClientboundContainerSetContentPacket build() {
                 NonNullList<net.minecraft.world.item.ItemStack> items = NonNullList.create();
-                for (org.bukkit.inventory.ItemStack item : getItems()) items.add(CraftItemStack.asNMSCopy(item));
-                return new ClientboundContainerSetContentPacket(getWindowId(), 0, items, net.minecraft.world.item.ItemStack.EMPTY);
+                for (org.bukkit.inventory.ItemStack item : getContent()) items.add(CraftItemStack.asNMSCopy(item));
+                return new ClientboundContainerSetContentPacket(getContainerId(), getStateId(), items, wrap(getCursor()));
             }
         };
     }
@@ -712,12 +726,99 @@ public final class OutgoingPacketManager implements Mapping.PacketManager.Outgoi
 
     @Nonnull
     @Override
-    public ItemTakePacket itemTakePacket(int itemId, int collectorId, int amount) {
-        return new ItemTakePacket(itemId, collectorId, amount) {
+    public SetPlayerTeamPacket setPlayerTeamPacket(@Nonnull String name, @Nonnull SetPlayerTeamPacket.Option option, @Nullable SetPlayerTeamPacket.Parameters parameters, @Nonnull List<String> entries) {
+        return new SetPlayerTeamPacket(name, option, parameters, entries) {
+            @Nonnull
+            @Override
+            public ClientboundSetPlayerTeamPacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeUtf(getName());
+                buffer.writeByte(getOption().ordinal());
+                if (getOption().needsParameters()) {
+                    if (getParameters() == null) throw new IllegalStateException("parameters not present but required");
+                    buffer.writeComponent(Component.literal(getParameters().getDisplayName()));
+                    buffer.writeByte(getParameters().packOptions());
+                    buffer.writeUtf(switch (getParameters().getNameTagVisibility()) {
+                        case ALWAYS -> "always";
+                        case NEVER -> "never";
+                        case HIDE_FOR_OTHER_TEAMS -> "hideForOtherTeams";
+                        case HIDE_FOR_OWN_TEAM -> "hideForOwnTeam";
+                    });
+                    buffer.writeUtf(switch (getParameters().getCollisionRule()) {
+                        case ALWAYS -> "always";
+                        case NEVER -> "never";
+                        case PUSH_OTHER_TEAMS -> "pushOtherTeams";
+                        case PUSH_OWN_TEAM -> "pushOwnTeam";
+                    });
+                    buffer.writeEnum(wrap(getParameters().getColor()));
+                    buffer.writeComponent(Component.literal(getParameters().getPrefix()));
+                    buffer.writeComponent(Component.literal(getParameters().getSuffix()));
+                }
+                if (getOption().needsEntries()) buffer.writeCollection(getEntries(), FriendlyByteBuf::writeUtf);
+                return new ClientboundSetPlayerTeamPacket(buffer);
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public TagQueryPacket tagQueryPacket(int transactionId, @Nullable NBTTag tag) {
+        return new TagQueryPacket(transactionId, tag) {
+            @Nonnull
+            @Override
+            public ClientboundTagQueryPacket build() {
+                return new ClientboundTagQueryPacket(getTransactionId(), getTag() != null ? getTag().versioned() : null);
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public SetChunkCacheRadiusPacket setChunkCacheRadiusPacket(int radius) {
+        return new SetChunkCacheRadiusPacket(radius) {
+            @Nonnull
+            @Override
+            public ClientboundSetChunkCacheRadiusPacket build() {
+                return new ClientboundSetChunkCacheRadiusPacket(getRadius());
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public RotateHeadPacket rotateHeadPacket(int entityId, byte yaw) {
+        return new RotateHeadPacket(entityId, yaw) {
+            @Nonnull
+            @Override
+            public ClientboundRotateHeadPacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeVarInt(getEntityId());
+                buffer.writeByte(getYaw());
+                return new ClientboundRotateHeadPacket(buffer);
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public TakeItemEntityPacket takeItemEntityPacket(int entityId, int playerId, int amount) {
+        return new TakeItemEntityPacket(entityId, playerId, amount) {
             @Nonnull
             @Override
             public ClientboundTakeItemEntityPacket build() {
-                return new ClientboundTakeItemEntityPacket(getItemId(), getCollectorId(), getAmount());
+                return new ClientboundTakeItemEntityPacket(getEntityId(), getPlayerId(), getAmount());
+            }
+        };
+    }
+
+    @Nonnull
+    @Override
+    public SetChunkCacheCenterPacket setChunkCacheCenterPacket(int x, int z) {
+        return new SetChunkCacheCenterPacket(x, z) {
+            @Nonnull
+            @Override
+            public ClientboundSetChunkCacheCenterPacket build() {
+                return new ClientboundSetChunkCacheCenterPacket(getX(), getZ());
             }
         };
     }
@@ -765,22 +866,43 @@ public final class OutgoingPacketManager implements Mapping.PacketManager.Outgoi
         } else if (packet instanceof ClientboundSetTimePacket instance) {
             return UpdateTimePacket.create(instance.getGameTime(), instance.getDayTime(), instance.getDayTime() < 0);
         } else if (packet instanceof ClientboundContainerSetContentPacket instance) {
+            return ContainerSetContentPacket.create(instance.getContainerId(), instance.getStateId(), wrap(instance.getItems(), 0), wrap(instance.getCarriedItem()));
         } else if (packet instanceof ClientboundSetPlayerTeamPacket instance) {
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            instance.write(buffer);
+            String name = buffer.readUtf();
+            SetPlayerTeamPacket.Option option = SetPlayerTeamPacket.Option.values()[buffer.readByte()];
+            SetPlayerTeamPacket.Parameters parameters = null;
+            if (option.needsParameters()) {
+                parameters = wrap(new ClientboundSetPlayerTeamPacket.Parameters(buffer));
+            }
+            List<String> entries = new ArrayList<>();
+            if (option.needsEntries()) entries = buffer.readCollection(ArrayList::new, FriendlyByteBuf::readUtf);
+            return SetPlayerTeamPacket.create(name, option, parameters, entries);
         } else if (packet instanceof ClientboundUpdateTagsPacket instance) {
         } else if (packet instanceof ClientboundSetSimulationDistancePacket instance) {
             return SetSimulationDistancePacket.create(instance.simulationDistance());
         } else if (packet instanceof ClientboundChatPreviewPacket instance) {
+            return ChatPreviewPacket.create(instance.queryId(), instance.preview() != null ? instance.preview().getString() : null);
         } else if (packet instanceof ClientboundLevelChunkPacketData instance) {
         } else if (packet instanceof ClientboundTagQueryPacket instance) {
+            return TagQueryPacket.create(instance.getTransactionId(), nullable(instance.getTag()));
         } else if (packet instanceof ClientboundSetChunkCacheRadiusPacket instance) {
+            return SetChunkCacheRadiusPacket.create(instance.getRadius());
         } else if (packet instanceof ClientboundRotateHeadPacket instance) {
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            instance.write(buffer);
+            return RotateHeadPacket.create(buffer.readVarInt(), buffer.readByte());
         } else if (packet instanceof ClientboundLoginPacket instance) {
         } else if (packet instanceof ClientboundLightUpdatePacketData instance) {
         } else if (packet instanceof ClientboundTakeItemEntityPacket instance) {
+            return TakeItemEntityPacket.create(instance.getItemId(), instance.getPlayerId(), instance.getAmount());
         } else if (packet instanceof ClientboundSetChunkCacheCenterPacket instance) {
+            return SetChunkCacheCenterPacket.create(instance.getX(), instance.getZ());
         } else if (packet instanceof ClientboundCustomPayloadPacket instance) {
         } else if (packet instanceof ClientboundSectionBlocksUpdatePacket instance) {
         } else if (packet instanceof ClientboundBlockDestructionPacket instance) {
+            return BlockDestructionPacket.create(instance.getId(), wrap(instance.getPos()), instance.getProgress());
         } else if (packet instanceof ClientboundUpdateRecipesPacket instance) {
         } else if (packet instanceof ClientboundDisconnectPacket instance) {
         } else if (packet instanceof ClientboundSoundEntityPacket instance) {
