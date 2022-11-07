@@ -3,34 +3,33 @@ package net.nonswag.tnl.mappings.v1_19_R1.api.player.channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import net.nonswag.core.api.annotation.MethodsReturnNonnullByDefault;
 import net.nonswag.tnl.listener.api.event.EventManager;
 import net.nonswag.tnl.listener.api.mapper.Mapping;
-import net.nonswag.tnl.listener.api.packets.listener.PacketEvent;
+import net.nonswag.tnl.listener.api.packets.listener.PacketReader;
+import net.nonswag.tnl.listener.api.packets.listener.PacketWriter;
 import net.nonswag.tnl.listener.api.player.TNLPlayer;
-import net.nonswag.tnl.listener.api.plugin.CombinedPlugin;
 
-import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-;
-
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public abstract class PlayerChannelHandler extends ChannelDuplexHandler {
 
     @Override
     @SuppressWarnings("rawtypes")
-    public void channelRead(@Nonnull ChannelHandlerContext context, @Nonnull Object packet) throws Exception {
+    public void channelRead(ChannelHandlerContext context, Object packet) throws Exception {
         try {
             if (!handleInjections(packet)) return;
             var readers = EventManager.getAllReaders();
             if (!readers.isEmpty()) {
+                AtomicBoolean cancelled = new AtomicBoolean();
                 var incoming = Mapping.get().packetManager().incoming().map(packet);
-                var event = new PacketEvent<>(getPlayer(), incoming);
-                Mapping.get().pluginHelper().getPlugins().forEach(plugin -> {
-                    if (!(plugin instanceof CombinedPlugin combinedPlugin) || !plugin.isEnabled()) return;
-                    combinedPlugin.getEventManager().getReaders().forEach((reader, clazz) -> tryCatch(() -> {
-                        if (clazz.isInstance(incoming)) reader.read((PacketEvent) event);
-                    }));
-                });
-                if (!event.isCancelled()) super.channelRead(context, event.getPacket().build());
+                readers.forEach((reader, clazz) -> tryCatch(() -> {
+                    if (clazz.isInstance(incoming)) ((PacketReader) reader).read(getPlayer(), incoming, cancelled);
+                }));
+                if (!cancelled.get()) super.channelRead(context, incoming.build());
             } else super.channelRead(context, packet);
         } catch (Exception e) {
             super.channelRead(context, packet);
@@ -45,12 +44,12 @@ public abstract class PlayerChannelHandler extends ChannelDuplexHandler {
             if (!handleInjections(packet)) return;
             var writers = EventManager.getAllWriters();
             if (!writers.isEmpty()) {
+                AtomicBoolean cancelled = new AtomicBoolean();
                 var outgoing = Mapping.get().packetManager().outgoing().map(packet);
-                var event = new PacketEvent<>(getPlayer(), outgoing);
                 writers.forEach((writer, clazz) -> tryCatch(() -> {
-                    if (clazz.isInstance(outgoing)) writer.write((PacketEvent) event);
+                    if (clazz.isInstance(outgoing)) ((PacketWriter) writer).write(getPlayer(), outgoing, cancelled);
                 }));
-                if (!event.isCancelled()) super.write(context, event.getPacket().build(), channel);
+                if (!cancelled.get()) super.write(context, outgoing.build(), channel);
             } else super.write(context, packet, channel);
         } catch (Exception e) {
             super.write(context, packet, channel);
@@ -58,7 +57,7 @@ public abstract class PlayerChannelHandler extends ChannelDuplexHandler {
         }
     }
 
-    private void tryCatch(@Nonnull Runnable runnable) {
+    private void tryCatch(Runnable runnable) {
         try {
             runnable.run();
         } catch (Exception e) {
@@ -66,8 +65,7 @@ public abstract class PlayerChannelHandler extends ChannelDuplexHandler {
         }
     }
 
-    public abstract boolean handleInjections(@Nonnull Object packet);
+    public abstract boolean handleInjections(Object packet);
 
-    @Nonnull
     public abstract TNLPlayer getPlayer();
 }

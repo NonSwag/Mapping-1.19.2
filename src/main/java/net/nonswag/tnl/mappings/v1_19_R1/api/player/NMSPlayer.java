@@ -16,6 +16,8 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
+import net.nonswag.core.api.annotation.FieldsAreNullableByDefault;
+import net.nonswag.core.api.annotation.MethodsReturnNonnullByDefault;
 import net.nonswag.core.api.logger.Logger;
 import net.nonswag.core.api.message.Message;
 import net.nonswag.core.api.reflection.Reflection;
@@ -32,6 +34,7 @@ import net.nonswag.tnl.listener.api.player.TNLPlayer;
 import net.nonswag.tnl.listener.api.player.manager.*;
 import net.nonswag.tnl.listener.api.sign.SignMenu;
 import net.nonswag.tnl.mappings.v1_19_R1.api.player.channel.PlayerChannelHandler;
+import net.nonswag.tnl.mappings.v1_19_R1.api.player.manager.NMSResourceManager;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
@@ -49,17 +52,48 @@ import org.bukkit.plugin.Plugin;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+@FieldsAreNullableByDefault
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public class NMSPlayer extends TNLPlayer {
+    private PermissionManager permissionManager;
+    private DataManager dataManager;
+    private LabyPlayer labymod;
+    private SoundManager soundManager;
+    private NPCFactory npcFactory;
+    private HologramManager hologramManager;
+    private Messenger messenger;
+    private ScoreboardManager scoreboardManager;
+    private InterfaceManager interfaceManager;
+    private WorldManager worldManager;
+    private EnvironmentManager environmentManager;
+    private HealthManager healthManager;
+    private CombatManager combatManager;
+    private SkinManager skinManager;
+    private InventoryManager inventoryManager;
+    private DebugManager debugManager;
+    private AttributeManager attributeManager;
+    private MetaManager metaManager;
+    private EffectManager effectManager;
+    private AbilityManager abilityManager;
+    private ServerManager serverManager;
+    private CinematicManger cinematicManger;
+    private TitleManager titleManager;
+    private ParticleManager particleManager;
+    private BossBarManager bossBarManager;
+    private CooldownManager cooldownManager;
+    private NMSResourceManager resourceManager;
+    private Pipeline pipeline;
 
     public NMSPlayer(@Nonnull Player player) {
         super(player);
-        gameProfile = new net.nonswag.tnl.listener.api.player.GameProfile(getUniqueId(), getRealName(), skinManager().getSkin());
     }
 
     @Nonnull
@@ -85,6 +119,11 @@ public class NMSPlayer extends TNLPlayer {
             all.abilityManager().hide(plugin, this);
             all.abilityManager().show(plugin, this);
         });
+    }
+
+    @Override
+    public net.nonswag.tnl.listener.api.player.GameProfile getGameProfile() {
+        return new net.nonswag.tnl.listener.api.player.GameProfile(getUniqueId(), getName(), skinManager().getSkin());
     }
 
     @Override
@@ -163,14 +202,14 @@ public class NMSPlayer extends TNLPlayer {
     @Nonnull
     @Override
     public DataManager data() {
-        if (data == null) data = new DataManager() {
+        if (dataManager == null) dataManager = new DataManager() {
             @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
             }
         };
-        return data;
+        return dataManager;
     }
 
     @Nonnull
@@ -262,7 +301,7 @@ public class NMSPlayer extends TNLPlayer {
                 BlockLocation location = new BlockLocation(worldManager().getWorld(), loc.getBlockX(), Math.max(loc.getBlockY() - 5, 0), loc.getBlockZ());
                 signMenu.setLocation(location);
                 BlockPos position = new BlockPos(location.getX(), location.getY(), location.getZ());
-                OpenSignPacket editor = OpenSignPacket.create(location);
+                OpenSignEditorPacket editor = OpenSignEditorPacket.create(location);
                 Material material = Material.getMaterial(signMenu.getType().name());
                 CraftBlockData blockData = (CraftBlockData) Objects.requireNonNullElse(material, Material.SPRUCE_WALL_SIGN).createBlockData();
                 SignBlockEntity tileEntitySign = new SignBlockEntity(position, blockData.getState());
@@ -403,9 +442,9 @@ public class NMSPlayer extends TNLPlayer {
             @Override
             public void disguise(@Nonnull TNLEntity entity, @Nonnull TNLPlayer receiver) {
                 if (getPlayer().equals(receiver)) return;
-                EntityDestroyPacket.create(getPlayer().bukkit()).send(receiver);
+                RemoveEntitiesPacket.create(getPlayer().bukkit()).send(receiver);
                 int id = entity.getEntityId();
-                EntityDestroyPacket.create(id).send(receiver);
+                RemoveEntitiesPacket.create(id).send(receiver);
                 if (entity instanceof TNLEntityPlayer player) {
                     PlayerInfoPacket.create(player, PlayerInfoPacket.Action.REMOVE_PLAYER).send(receiver);
                     Reflection.Field.set(entity, Entity.class, "id", getPlayer().getEntityId());
@@ -417,7 +456,7 @@ public class NMSPlayer extends TNLPlayer {
                     EntityEquipmentPacket.create(livingEntity.bukkit()).send(receiver);
                 } else {
                     Reflection.Field.set(entity, Entity.class, "id", getPlayer().getEntityId());
-                    EntitySpawnPacket.create(entity.bukkit()).send(receiver);
+                    AddEntityPacket.create(entity.bukkit()).send(receiver);
                 }
                 EntityMetadataPacket.create(entity.bukkit()).send(receiver);
                 EntityHeadRotationPacket.create(entity.bukkit()).send(receiver);
@@ -635,14 +674,14 @@ public class NMSPlayer extends TNLPlayer {
     @Nonnull
     @Override
     public NMSResourceManager resourceManager() {
-        if (!(resourceManager instanceof NMSResourceManager)) resourceManager = new NMSResourceManager() {
+        if (resourceManager == null) resourceManager = new NMSResourceManager() {
             @Nonnull
             @Override
             public NMSPlayer getPlayer() {
                 return NMSPlayer.this;
             }
         };
-        return (NMSResourceManager) resourceManager;
+        return resourceManager;
     }
 
     @Nonnull
@@ -673,6 +712,7 @@ public class NMSPlayer extends TNLPlayer {
             }
 
             @Override
+            @SuppressWarnings("deprecation")
             public void uninject() {
                 try {
                     Channel channel = nms().networkManager.channel;
@@ -693,7 +733,7 @@ public class NMSPlayer extends TNLPlayer {
             public void inject() {
                 try {
                     ChannelPipeline pipeline = nms().networkManager.channel.pipeline();
-                    pipeline.addFirst(name, new PlayerChannelHandler() {
+                    pipeline.addBefore("packet_handler", name, new PlayerChannelHandler() {
                         @Nonnull
                         @Override
                         public TNLPlayer getPlayer() {
@@ -719,20 +759,5 @@ public class NMSPlayer extends TNLPlayer {
                 return NMSPlayer.this;
             }
         } : pipeline;
-    }
-
-    public static abstract class NMSResourceManager extends ResourceManager {
-
-        public void setStatus(@Nullable Status status) {
-            this.status = status;
-        }
-
-        public void setResourcePackUrl(@Nonnull String url) {
-            this.resourcePackUrl = url;
-        }
-
-        public void setResourcePackHash(@Nonnull String hash) {
-            this.resourcePackHash = hash;
-        }
     }
 }

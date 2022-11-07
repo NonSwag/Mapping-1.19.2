@@ -4,6 +4,7 @@ import com.mojang.brigadier.Message;
 import com.mojang.brigadier.context.StringRange;
 import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.suggestion.Suggestions;
+import io.papermc.paper.adventure.PaperAdventure;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.ChatFormatting;
@@ -12,6 +13,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.LastSeenMessages;
 import net.minecraft.network.chat.MessageSignature;
 import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
@@ -23,249 +26,75 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.nonswag.core.api.annotation.FieldsAreNonnullByDefault;
+import net.nonswag.core.api.annotation.MethodsReturnNonnullByDefault;
+import net.nonswag.tnl.listener.api.gui.Interaction;
 import net.nonswag.tnl.listener.api.item.SlotType;
 import net.nonswag.tnl.listener.api.item.TNLItem;
 import net.nonswag.tnl.listener.api.location.BlockPosition;
 import net.nonswag.tnl.listener.api.nbt.NBTTag;
 import net.nonswag.tnl.listener.api.packets.incoming.ChatCommandPacket;
+import net.nonswag.tnl.listener.api.packets.incoming.ContainerClickPacket;
 import net.nonswag.tnl.listener.api.packets.incoming.SetBeaconPacket;
 import net.nonswag.tnl.listener.api.packets.incoming.UseItemOnPacket;
 import net.nonswag.tnl.listener.api.packets.outgoing.*;
 import net.nonswag.tnl.listener.api.player.Hand;
 import net.nonswag.tnl.mappings.v1_19_R1.api.nbt.NBT;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
-import org.bukkit.SoundCategory;
+import org.bukkit.*;
+import org.bukkit.block.BlockFace;
 import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.v1_19_R1.util.CraftChatMessage;
+import org.bukkit.craftbukkit.v1_19_R1.util.CraftMagicNumbers;
+import org.bukkit.entity.EntityType;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
+@FieldsAreNonnullByDefault
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public final class NMSHelper {
 
-    @Nonnull
-    public static NBTTag wrap(@Nonnull CompoundTag tag) {
-        return new NBT(tag);
+    public static OpenScreenPacket.Type wrap(MenuType<?> type) {
+        if (type.equals(MenuType.GENERIC_9x1)) return OpenScreenPacket.Type.CHEST_9X1;
+        else if (type.equals(MenuType.GENERIC_9x2)) return OpenScreenPacket.Type.CHEST_9X2;
+        else if (type.equals(MenuType.GENERIC_9x3)) return OpenScreenPacket.Type.CHEST_9X3;
+        else if (type.equals(MenuType.GENERIC_9x4)) return OpenScreenPacket.Type.CHEST_9X4;
+        else if (type.equals(MenuType.GENERIC_9x5)) return OpenScreenPacket.Type.CHEST_9X5;
+        else if (type.equals(MenuType.GENERIC_9x6)) return OpenScreenPacket.Type.CHEST_9X6;
+        else if (type.equals(MenuType.GENERIC_3x3)) return OpenScreenPacket.Type.DISPENSER;
+        else if (type.equals(MenuType.ANVIL)) return OpenScreenPacket.Type.ANVIL;
+        else if (type.equals(MenuType.BEACON)) return OpenScreenPacket.Type.BEACON;
+        else if (type.equals(MenuType.BLAST_FURNACE)) return OpenScreenPacket.Type.BLAST_FURNACE;
+        else if (type.equals(MenuType.BREWING_STAND)) return OpenScreenPacket.Type.BREWING_STAND;
+        else if (type.equals(MenuType.CRAFTING)) return OpenScreenPacket.Type.WORKBENCH;
+        else if (type.equals(MenuType.ENCHANTMENT)) return OpenScreenPacket.Type.ENCHANTER;
+        else if (type.equals(MenuType.FURNACE)) return OpenScreenPacket.Type.FURNACE;
+        else if (type.equals(MenuType.GRINDSTONE)) return OpenScreenPacket.Type.GRINDSTONE;
+        else if (type.equals(MenuType.HOPPER)) return OpenScreenPacket.Type.HOPPER;
+        else if (type.equals(MenuType.LECTERN)) return OpenScreenPacket.Type.LECTERN;
+        else if (type.equals(MenuType.LOOM)) return OpenScreenPacket.Type.LOOM;
+        else if (type.equals(MenuType.MERCHANT)) return OpenScreenPacket.Type.MERCHANT;
+        else if (type.equals(MenuType.SHULKER_BOX)) return OpenScreenPacket.Type.SHULKER_BOX;
+        else if (type.equals(MenuType.SMITHING)) return OpenScreenPacket.Type.SMITHING_TABLE;
+        else if (type.equals(MenuType.SMOKER)) return OpenScreenPacket.Type.SMOKER;
+        else if (type.equals(MenuType.CARTOGRAPHY_TABLE)) return OpenScreenPacket.Type.CARTOGRAPHY_TABLE;
+        else if (type.equals(MenuType.STONECUTTER)) return OpenScreenPacket.Type.STONECUTTER;
+        else throw new IllegalStateException("unknown menu type: " + type.getClass().getName());
     }
 
-    @Nullable
-    public static NBTTag nullable(@Nullable CompoundTag tag) {
-        return tag != null ? wrap(tag) : null;
-    }
-
-    @Nonnull
-    public static ChatColor wrap(@Nonnull ChatFormatting formatting) {
-        return CraftChatMessage.getColor(formatting);
-    }
-
-    @Nonnull
-    public static ChatFormatting wrap(@Nonnull ChatColor color) {
-        return CraftChatMessage.getColor(color);
-    }
-
-    @Nonnull
-    public static SetPlayerTeamPacket.Parameters wrap(@Nonnull ClientboundSetPlayerTeamPacket.Parameters parameters) {
-        SetPlayerTeamPacket.Parameters value = new SetPlayerTeamPacket.Parameters();
-        value.setDisplayName(parameters.getDisplayName().getString());
-        value.setNameTagVisibility(switch (parameters.getNametagVisibility()) {
-            case "never" -> SetPlayerTeamPacket.Parameters.Visibility.NEVER;
-            case "hideForOtherTeams" -> SetPlayerTeamPacket.Parameters.Visibility.HIDE_FOR_OTHER_TEAMS;
-            case "hideForOwnTeam" -> SetPlayerTeamPacket.Parameters.Visibility.HIDE_FOR_OWN_TEAM;
-            default -> SetPlayerTeamPacket.Parameters.Visibility.ALWAYS;
-        });
-        value.setCollisionRule(switch (parameters.getCollisionRule()) {
-            case "never" -> SetPlayerTeamPacket.Parameters.CollisionRule.NEVER;
-            case "pushOtherTeams" -> SetPlayerTeamPacket.Parameters.CollisionRule.PUSH_OTHER_TEAMS;
-            case "pushOwnTeam" -> SetPlayerTeamPacket.Parameters.CollisionRule.PUSH_OWN_TEAM;
-            default -> SetPlayerTeamPacket.Parameters.CollisionRule.ALWAYS;
-        });
-        value.setColor(wrap(parameters.getColor()));
-        value.setPrefix(parameters.getPlayerPrefix().getString());
-        value.setSuffix(parameters.getPlayerSuffix().getString());
-        value.unpackOptions(parameters.getOptions());
-        return value;
-    }
-
-    @Nonnull
-    public static EquipmentSlot wrap(@Nonnull SlotType type) {
-        return switch (type) {
-            case MAIN_HAND -> EquipmentSlot.MAINHAND;
-            case OFF_HAND -> EquipmentSlot.OFFHAND;
-            case HELMET -> EquipmentSlot.HEAD;
-            case CHESTPLATE -> EquipmentSlot.CHEST;
-            case LEGGINGS -> EquipmentSlot.LEGS;
-            case BOOTS -> EquipmentSlot.FEET;
-        };
-    }
-
-    @Nonnull
-    public static ClientboundGameEventPacket.Type wrap(@Nonnull GameStateChangePacket.Identifier identifier) {
-        return switch (identifier.getId()) {
-            case 0 -> ClientboundGameEventPacket.NO_RESPAWN_BLOCK_AVAILABLE;
-            case 1 -> ClientboundGameEventPacket.START_RAINING;
-            case 2 -> ClientboundGameEventPacket.STOP_RAINING;
-            case 3 -> ClientboundGameEventPacket.CHANGE_GAME_MODE;
-            case 4 -> ClientboundGameEventPacket.WIN_GAME;
-            case 5 -> ClientboundGameEventPacket.DEMO_EVENT;
-            case 6 -> ClientboundGameEventPacket.ARROW_HIT_PLAYER;
-            case 7 -> ClientboundGameEventPacket.RAIN_LEVEL_CHANGE;
-            case 8 -> ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE;
-            case 9 -> ClientboundGameEventPacket.PUFFER_FISH_STING;
-            case 10 -> ClientboundGameEventPacket.GUARDIAN_ELDER_EFFECT;
-            case 11 -> ClientboundGameEventPacket.IMMEDIATE_RESPAWN;
-            default -> throw new IllegalStateException("Unexpected value: " + identifier.getId());
-        };
-    }
-
-    @Nonnull
-    public static GameStateChangePacket.Identifier wrap(@Nonnull ClientboundGameEventPacket.Type type) {
-        if (type.equals(ClientboundGameEventPacket.NO_RESPAWN_BLOCK_AVAILABLE)) {
-            return GameStateChangePacket.NO_RESPAWN_BLOCK_AVAILABLE;
-        } else if (type.equals(ClientboundGameEventPacket.START_RAINING)) {
-            return GameStateChangePacket.START_RAINING;
-        } else if (type.equals(ClientboundGameEventPacket.STOP_RAINING)) {
-            return GameStateChangePacket.STOP_RAINING;
-        } else if (type.equals(ClientboundGameEventPacket.CHANGE_GAME_MODE)) {
-            return GameStateChangePacket.CHANGE_GAMEMODE;
-        } else if (type.equals(ClientboundGameEventPacket.WIN_GAME)) {
-            return GameStateChangePacket.WIN_GAME;
-        } else if (type.equals(ClientboundGameEventPacket.DEMO_EVENT)) {
-            return GameStateChangePacket.DEMO_EVENT;
-        } else if (type.equals(ClientboundGameEventPacket.ARROW_HIT_PLAYER)) {
-            return GameStateChangePacket.ARROW_HIT_PLAYER;
-        } else if (type.equals(ClientboundGameEventPacket.RAIN_LEVEL_CHANGE)) {
-            return GameStateChangePacket.RAIN_LEVEL_CHANGE;
-        } else if (type.equals(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE)) {
-            return GameStateChangePacket.THUNDER_LEVEL_CHANGE;
-        } else if (type.equals(ClientboundGameEventPacket.PUFFER_FISH_STING)) {
-            return GameStateChangePacket.PUFFER_FISH_STING;
-        } else if (type.equals(ClientboundGameEventPacket.GUARDIAN_ELDER_EFFECT)) {
-            return GameStateChangePacket.GUARDIAN_ELDER_EFFECT;
-        } else if (type.equals(ClientboundGameEventPacket.IMMEDIATE_RESPAWN)) {
-            return GameStateChangePacket.IMMEDIATE_RESPAWN;
-        } else throw new IllegalStateException("Unmapped game event type");
-    }
-
-    @Nonnull
-    public static ClientboundPlayerInfoPacket.Action wrap(@Nonnull PlayerInfoPacket.Action action) {
-        return switch (action) {
-            case ADD_PLAYER -> ClientboundPlayerInfoPacket.Action.ADD_PLAYER;
-            case REMOVE_PLAYER -> ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER;
-            case UPDATE_LATENCY -> ClientboundPlayerInfoPacket.Action.UPDATE_LATENCY;
-            case UPDATE_GAME_MODE -> ClientboundPlayerInfoPacket.Action.UPDATE_GAME_MODE;
-            case UPDATE_DISPLAY_NAME -> ClientboundPlayerInfoPacket.Action.UPDATE_DISPLAY_NAME;
-        };
-    }
-
-    @Nonnull
-    public static SoundSource wrap(@Nonnull SoundCategory category) {
-        return switch (category) {
-            case MASTER -> SoundSource.MASTER;
-            case MUSIC -> SoundSource.MUSIC;
-            case RECORDS -> SoundSource.RECORDS;
-            case WEATHER -> SoundSource.WEATHER;
-            case BLOCKS -> SoundSource.BLOCKS;
-            case HOSTILE -> SoundSource.HOSTILE;
-            case NEUTRAL -> SoundSource.NEUTRAL;
-            case PLAYERS -> SoundSource.PLAYERS;
-            case AMBIENT -> SoundSource.AMBIENT;
-            case VOICE -> SoundSource.VOICE;
-        };
-    }
-
-    @Nullable
-    public static SoundSource nullable(@Nullable SoundCategory category) {
-        return category != null ? wrap(category) : null;
-    }
-
-    @Nonnull
-    public static SoundCategory wrap(@Nonnull SoundSource source) {
-        return switch (source) {
-            case MASTER -> SoundCategory.MASTER;
-            case MUSIC -> SoundCategory.MUSIC;
-            case RECORDS -> SoundCategory.RECORDS;
-            case WEATHER -> SoundCategory.WEATHER;
-            case BLOCKS -> SoundCategory.BLOCKS;
-            case HOSTILE -> SoundCategory.HOSTILE;
-            case NEUTRAL -> SoundCategory.NEUTRAL;
-            case PLAYERS -> SoundCategory.PLAYERS;
-            case AMBIENT -> SoundCategory.AMBIENT;
-            case VOICE -> SoundCategory.VOICE;
-        };
-    }
-
-    @Nullable
-    public static SoundCategory nullable(@Nullable SoundSource source) {
-        return source != null ? wrap(source) : null;
-    }
-
-    @Nonnull
-    public static CommandSuggestionsPacket.Suggestions wrap(@Nonnull Suggestions suggestions) {
-        List<CommandSuggestionsPacket.Suggestion> list = new ArrayList<>();
-        suggestions.getList().forEach(suggestion -> list.add(wrap(suggestion)));
-        return new CommandSuggestionsPacket.Suggestions(wrap(suggestions.getRange()), list);
-    }
-
-    @Nonnull
-    public static CommandSuggestionsPacket.StringRange wrap(@Nonnull StringRange range) {
-        return new CommandSuggestionsPacket.StringRange(range.getStart(), range.getEnd());
-    }
-
-    @Nonnull
-    public static CommandSuggestionsPacket.Suggestion wrap(@Nonnull Suggestion suggestion) {
-        return new CommandSuggestionsPacket.Suggestion(wrap(suggestion.getRange()), suggestion.getText(), nullable(suggestion.getTooltip()));
-    }
-
-    @Nonnull
-    public static CommandSuggestionsPacket.Tooltip wrap(@Nonnull Message message) {
-        return message::getString;
-    }
-
-    @Nullable
-    public static CommandSuggestionsPacket.Tooltip nullable(@Nullable Message message) {
-        return message != null ? wrap(message) : null;
-    }
-
-    @Nonnull
-    public static Suggestions wrap(@Nonnull CommandSuggestionsPacket.Suggestions suggestions) {
-        List<Suggestion> list = new ArrayList<>();
-        suggestions.getSuggestions().forEach(suggestion -> list.add(wrap(suggestion)));
-        return new Suggestions(wrap(suggestions.getRange()), list);
-    }
-
-    @Nonnull
-    public static StringRange wrap(@Nonnull CommandSuggestionsPacket.StringRange range) {
-        return new StringRange(range.start(), range.end());
-    }
-
-    @Nonnull
-    public static Suggestion wrap(@Nonnull CommandSuggestionsPacket.Suggestion suggestion) {
-        return new Suggestion(wrap(suggestion.getRange()), suggestion.getText(), nullable(suggestion.getTooltip()));
-    }
-
-    @Nonnull
-    public static Message wrap(@Nonnull CommandSuggestionsPacket.Tooltip tooltip) {
-        return tooltip::getMessage;
-    }
-
-    @Nullable
-    public static Message nullable(@Nullable CommandSuggestionsPacket.Tooltip tooltip) {
-        return tooltip != null ? wrap(tooltip) : null;
-    }
-
-    @Nonnull
-    public static MenuType<?> wrap(@Nonnull OpenWindowPacket.Type type) {
+    public static MenuType<?> wrap(OpenScreenPacket.Type type) {
         return switch (type) {
             case CHEST_9X1 -> MenuType.GENERIC_9x1;
             case CHEST_9X2 -> MenuType.GENERIC_9x2;
@@ -294,13 +123,263 @@ public final class NMSHelper {
         };
     }
 
-    @Nonnull
-    public static Vec3i wrap(@Nonnull Vector vector) {
-        return new Vec3i(vector.getX(), vector.getY(), vector.getZ());
+    public static byte[] wrap(FriendlyByteBuf buffer) {
+        byte[] data = new byte[buffer.readableBytes()];
+        buffer.readBytes(data);
+        return data;
+    }
+
+    @Nullable
+    public static net.kyori.adventure.text.Component nullable(@Nullable Component component) {
+        return component != null ? wrap(component) : null;
+    }
+
+    @Nullable
+    public static Component nullable(@Nullable net.kyori.adventure.text.Component component) {
+        return component != null ? wrap(component) : null;
     }
 
     @Nonnull
-    public static ItemStack wrap(@Nonnull TNLItem item) {
+    public static net.kyori.adventure.text.Component wrap(@Nonnull Component component) {
+        return PaperAdventure.asAdventure(component);
+    }
+
+    @Nonnull
+    public static Component wrap(@Nonnull net.kyori.adventure.text.Component component) {
+        return PaperAdventure.asVanilla(component);
+    }
+
+    public static EntityType wrap(net.minecraft.world.entity.EntityType<?> type) {
+        return CraftMagicNumbers.getEntityType(type);
+    }
+
+    public static net.minecraft.world.entity.EntityType<?> wrap(EntityType type) {
+        return CraftMagicNumbers.getEntityTypes(type);
+    }
+
+    public static Material wrap(Item item) {
+        return CraftMagicNumbers.getMaterial(item);
+    }
+
+    public static Item wrap(Material material) {
+        return CraftMagicNumbers.getItem(material);
+    }
+
+    public static Difficulty wrap(net.minecraft.world.Difficulty difficulty) {
+        return switch (difficulty) {
+            case PEACEFUL -> Difficulty.PEACEFUL;
+            case EASY -> Difficulty.EASY;
+            case NORMAL -> Difficulty.NORMAL;
+            case HARD -> Difficulty.HARD;
+        };
+    }
+
+    public static net.minecraft.world.Difficulty wrap(Difficulty difficulty) {
+        return switch (difficulty) {
+            case PEACEFUL -> net.minecraft.world.Difficulty.PEACEFUL;
+            case EASY -> net.minecraft.world.Difficulty.EASY;
+            case NORMAL -> net.minecraft.world.Difficulty.NORMAL;
+            case HARD -> net.minecraft.world.Difficulty.HARD;
+        };
+    }
+
+    public static NBTTag wrap(CompoundTag tag) {
+        return new NBT(tag);
+    }
+
+    @Nullable
+    public static NBTTag nullable(@Nullable CompoundTag tag) {
+        return tag != null ? wrap(tag) : null;
+    }
+
+    public static ChatColor wrap(ChatFormatting formatting) {
+        return CraftChatMessage.getColor(formatting);
+    }
+
+    public static ChatFormatting wrap(ChatColor color) {
+        return CraftChatMessage.getColor(color);
+    }
+
+    public static SetPlayerTeamPacket.Parameters wrap(ClientboundSetPlayerTeamPacket.Parameters parameters) {
+        SetPlayerTeamPacket.Parameters value = new SetPlayerTeamPacket.Parameters();
+        value.setDisplayName(parameters.getDisplayName().getString());
+        value.setNameTagVisibility(switch (parameters.getNametagVisibility()) {
+            case "never" -> SetPlayerTeamPacket.Parameters.Visibility.NEVER;
+            case "hideForOtherTeams" -> SetPlayerTeamPacket.Parameters.Visibility.HIDE_FOR_OTHER_TEAMS;
+            case "hideForOwnTeam" -> SetPlayerTeamPacket.Parameters.Visibility.HIDE_FOR_OWN_TEAM;
+            default -> SetPlayerTeamPacket.Parameters.Visibility.ALWAYS;
+        });
+        value.setCollisionRule(switch (parameters.getCollisionRule()) {
+            case "never" -> SetPlayerTeamPacket.Parameters.CollisionRule.NEVER;
+            case "pushOtherTeams" -> SetPlayerTeamPacket.Parameters.CollisionRule.PUSH_OTHER_TEAMS;
+            case "pushOwnTeam" -> SetPlayerTeamPacket.Parameters.CollisionRule.PUSH_OWN_TEAM;
+            default -> SetPlayerTeamPacket.Parameters.CollisionRule.ALWAYS;
+        });
+        value.setColor(wrap(parameters.getColor()));
+        value.setPrefix(parameters.getPlayerPrefix().getString());
+        value.setSuffix(parameters.getPlayerSuffix().getString());
+        value.unpackOptions(parameters.getOptions());
+        return value;
+    }
+
+    public static EquipmentSlot wrap(SlotType type) {
+        return switch (type) {
+            case MAIN_HAND -> EquipmentSlot.MAINHAND;
+            case OFF_HAND -> EquipmentSlot.OFFHAND;
+            case HELMET -> EquipmentSlot.HEAD;
+            case CHESTPLATE -> EquipmentSlot.CHEST;
+            case LEGGINGS -> EquipmentSlot.LEGS;
+            case BOOTS -> EquipmentSlot.FEET;
+        };
+    }
+
+    public static ClientboundGameEventPacket.Type wrap(GameStateChangePacket.Identifier identifier) {
+        return switch (identifier.getId()) {
+            case 0 -> ClientboundGameEventPacket.NO_RESPAWN_BLOCK_AVAILABLE;
+            case 1 -> ClientboundGameEventPacket.START_RAINING;
+            case 2 -> ClientboundGameEventPacket.STOP_RAINING;
+            case 3 -> ClientboundGameEventPacket.CHANGE_GAME_MODE;
+            case 4 -> ClientboundGameEventPacket.WIN_GAME;
+            case 5 -> ClientboundGameEventPacket.DEMO_EVENT;
+            case 6 -> ClientboundGameEventPacket.ARROW_HIT_PLAYER;
+            case 7 -> ClientboundGameEventPacket.RAIN_LEVEL_CHANGE;
+            case 8 -> ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE;
+            case 9 -> ClientboundGameEventPacket.PUFFER_FISH_STING;
+            case 10 -> ClientboundGameEventPacket.GUARDIAN_ELDER_EFFECT;
+            case 11 -> ClientboundGameEventPacket.IMMEDIATE_RESPAWN;
+            default -> throw new IllegalStateException("Unexpected value: " + identifier.getId());
+        };
+    }
+
+    public static GameStateChangePacket.Identifier wrap(ClientboundGameEventPacket.Type type) {
+        if (type.equals(ClientboundGameEventPacket.NO_RESPAWN_BLOCK_AVAILABLE)) {
+            return GameStateChangePacket.NO_RESPAWN_BLOCK_AVAILABLE;
+        } else if (type.equals(ClientboundGameEventPacket.START_RAINING)) {
+            return GameStateChangePacket.START_RAINING;
+        } else if (type.equals(ClientboundGameEventPacket.STOP_RAINING)) {
+            return GameStateChangePacket.STOP_RAINING;
+        } else if (type.equals(ClientboundGameEventPacket.CHANGE_GAME_MODE)) {
+            return GameStateChangePacket.CHANGE_GAMEMODE;
+        } else if (type.equals(ClientboundGameEventPacket.WIN_GAME)) {
+            return GameStateChangePacket.WIN_GAME;
+        } else if (type.equals(ClientboundGameEventPacket.DEMO_EVENT)) {
+            return GameStateChangePacket.DEMO_EVENT;
+        } else if (type.equals(ClientboundGameEventPacket.ARROW_HIT_PLAYER)) {
+            return GameStateChangePacket.ARROW_HIT_PLAYER;
+        } else if (type.equals(ClientboundGameEventPacket.RAIN_LEVEL_CHANGE)) {
+            return GameStateChangePacket.RAIN_LEVEL_CHANGE;
+        } else if (type.equals(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE)) {
+            return GameStateChangePacket.THUNDER_LEVEL_CHANGE;
+        } else if (type.equals(ClientboundGameEventPacket.PUFFER_FISH_STING)) {
+            return GameStateChangePacket.PUFFER_FISH_STING;
+        } else if (type.equals(ClientboundGameEventPacket.GUARDIAN_ELDER_EFFECT)) {
+            return GameStateChangePacket.GUARDIAN_ELDER_EFFECT;
+        } else if (type.equals(ClientboundGameEventPacket.IMMEDIATE_RESPAWN)) {
+            return GameStateChangePacket.IMMEDIATE_RESPAWN;
+        } else throw new IllegalStateException("Unmapped game event type");
+    }
+
+    public static ClientboundPlayerInfoPacket.Action wrap(PlayerInfoPacket.Action action) {
+        return switch (action) {
+            case ADD_PLAYER -> ClientboundPlayerInfoPacket.Action.ADD_PLAYER;
+            case REMOVE_PLAYER -> ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER;
+            case UPDATE_LATENCY -> ClientboundPlayerInfoPacket.Action.UPDATE_LATENCY;
+            case UPDATE_GAME_MODE -> ClientboundPlayerInfoPacket.Action.UPDATE_GAME_MODE;
+            case UPDATE_DISPLAY_NAME -> ClientboundPlayerInfoPacket.Action.UPDATE_DISPLAY_NAME;
+        };
+    }
+
+    public static SoundSource wrap(SoundCategory category) {
+        return switch (category) {
+            case MASTER -> SoundSource.MASTER;
+            case MUSIC -> SoundSource.MUSIC;
+            case RECORDS -> SoundSource.RECORDS;
+            case WEATHER -> SoundSource.WEATHER;
+            case BLOCKS -> SoundSource.BLOCKS;
+            case HOSTILE -> SoundSource.HOSTILE;
+            case NEUTRAL -> SoundSource.NEUTRAL;
+            case PLAYERS -> SoundSource.PLAYERS;
+            case AMBIENT -> SoundSource.AMBIENT;
+            case VOICE -> SoundSource.VOICE;
+        };
+    }
+
+    @Nullable
+    public static SoundSource nullable(@Nullable SoundCategory category) {
+        return category != null ? wrap(category) : null;
+    }
+
+    public static SoundCategory wrap(SoundSource source) {
+        return switch (source) {
+            case MASTER -> SoundCategory.MASTER;
+            case MUSIC -> SoundCategory.MUSIC;
+            case RECORDS -> SoundCategory.RECORDS;
+            case WEATHER -> SoundCategory.WEATHER;
+            case BLOCKS -> SoundCategory.BLOCKS;
+            case HOSTILE -> SoundCategory.HOSTILE;
+            case NEUTRAL -> SoundCategory.NEUTRAL;
+            case PLAYERS -> SoundCategory.PLAYERS;
+            case AMBIENT -> SoundCategory.AMBIENT;
+            case VOICE -> SoundCategory.VOICE;
+        };
+    }
+
+    @Nullable
+    public static SoundCategory nullable(@Nullable SoundSource source) {
+        return source != null ? wrap(source) : null;
+    }
+
+    public static CommandSuggestionsPacket.Suggestions wrap(Suggestions suggestions) {
+        List<CommandSuggestionsPacket.Suggestion> list = new ArrayList<>();
+        suggestions.getList().forEach(suggestion -> list.add(wrap(suggestion)));
+        return new CommandSuggestionsPacket.Suggestions(wrap(suggestions.getRange()), list);
+    }
+
+    public static CommandSuggestionsPacket.StringRange wrap(StringRange range) {
+        return new CommandSuggestionsPacket.StringRange(range.getStart(), range.getEnd());
+    }
+
+    public static CommandSuggestionsPacket.Suggestion wrap(Suggestion suggestion) {
+        return new CommandSuggestionsPacket.Suggestion(wrap(suggestion.getRange()), suggestion.getText(), nullable(suggestion.getTooltip()));
+    }
+
+    public static CommandSuggestionsPacket.Tooltip wrap(Message message) {
+        return message::getString;
+    }
+
+    @Nullable
+    public static CommandSuggestionsPacket.Tooltip nullable(@Nullable Message message) {
+        return message != null ? wrap(message) : null;
+    }
+
+    public static Suggestions wrap(CommandSuggestionsPacket.Suggestions suggestions) {
+        List<Suggestion> list = new ArrayList<>();
+        suggestions.getSuggestions().forEach(suggestion -> list.add(wrap(suggestion)));
+        return new Suggestions(wrap(suggestions.getRange()), list);
+    }
+
+    public static StringRange wrap(CommandSuggestionsPacket.StringRange range) {
+        return new StringRange(range.start(), range.end());
+    }
+
+    public static Suggestion wrap(CommandSuggestionsPacket.Suggestion suggestion) {
+        return new Suggestion(wrap(suggestion.getRange()), suggestion.getText(), nullable(suggestion.getTooltip()));
+    }
+
+    public static Message wrap(CommandSuggestionsPacket.Tooltip tooltip) {
+        return tooltip::getMessage;
+    }
+
+    @Nullable
+    public static Message nullable(@Nullable CommandSuggestionsPacket.Tooltip tooltip) {
+        return tooltip != null ? wrap(tooltip) : null;
+    }
+
+    public static Vec3i wrap(Vector vector) {
+        return new Vec3i(vector.getX(), vector.getY(), vector.getZ());
+    }
+
+    public static ItemStack wrap(TNLItem item) {
         return CraftItemStack.asNMSCopy(item);
     }
 
@@ -319,13 +398,11 @@ public final class NMSHelper {
         return namespacedKey != null ? wrap(namespacedKey) : null;
     }
 
-    @Nonnull
-    public static ResourceLocation wrap(@Nonnull NamespacedKey channel) {
+    public static ResourceLocation wrap(NamespacedKey channel) {
         return new ResourceLocation(channel.getNamespace(), channel.getKey());
     }
 
-    @Nonnull
-    public static ArgumentSignatures wrap(@Nonnull ChatCommandPacket.Entry[] argumentSignatures) {
+    public static ArgumentSignatures wrap(ChatCommandPacket.Entry[] argumentSignatures) {
         List<ArgumentSignatures.Entry> entries = new ArrayList<>();
         for (ChatCommandPacket.Entry signature : argumentSignatures) {
             entries.add(new ArgumentSignatures.Entry(signature.getName(), new MessageSignature(signature.getSignature())));
@@ -333,15 +410,13 @@ public final class NMSHelper {
         return new ArgumentSignatures(entries);
     }
 
-    @Nonnull
-    public static net.nonswag.tnl.listener.api.chat.LastSeenMessages.Update wrap(@Nonnull LastSeenMessages.Update lastSeenMessages) {
+    public static net.nonswag.tnl.listener.api.chat.LastSeenMessages.Update wrap(LastSeenMessages.Update lastSeenMessages) {
         List<net.nonswag.tnl.listener.api.chat.LastSeenMessages.Entry> entries = new ArrayList<>();
         lastSeenMessages.lastSeen().entries().forEach(entry -> entries.add(wrap(entry)));
         return new net.nonswag.tnl.listener.api.chat.LastSeenMessages.Update(new net.nonswag.tnl.listener.api.chat.LastSeenMessages(entries), nullable(lastSeenMessages.lastReceived().orElse(null)));
     }
 
-    @Nonnull
-    public static net.nonswag.tnl.listener.api.chat.LastSeenMessages.Entry wrap(@Nonnull LastSeenMessages.Entry entry) {
+    public static net.nonswag.tnl.listener.api.chat.LastSeenMessages.Entry wrap(LastSeenMessages.Entry entry) {
         return new net.nonswag.tnl.listener.api.chat.LastSeenMessages.Entry(entry.profileId(), entry.lastSignature().bytes());
     }
 
@@ -350,15 +425,13 @@ public final class NMSHelper {
         return entry != null ? wrap(entry) : null;
     }
 
-    @Nonnull
-    public static LastSeenMessages.Update wrap(@Nonnull net.nonswag.tnl.listener.api.chat.LastSeenMessages.Update lastSeenMessages) {
+    public static LastSeenMessages.Update wrap(net.nonswag.tnl.listener.api.chat.LastSeenMessages.Update lastSeenMessages) {
         List<LastSeenMessages.Entry> entries = new ArrayList<>();
         lastSeenMessages.getLastSeen().getEntries().forEach(entry -> entries.add(wrap(entry)));
         return new LastSeenMessages.Update(new LastSeenMessages(entries), Optional.ofNullable(nullable(lastSeenMessages.getLastReceived())));
     }
 
-    @Nonnull
-    public static LastSeenMessages.Entry wrap(@Nonnull net.nonswag.tnl.listener.api.chat.LastSeenMessages.Entry entry) {
+    public static LastSeenMessages.Entry wrap(net.nonswag.tnl.listener.api.chat.LastSeenMessages.Entry entry) {
         return new LastSeenMessages.Entry(entry.profileId(), new MessageSignature(entry.lastSignature()));
     }
 
@@ -367,26 +440,22 @@ public final class NMSHelper {
         return entry != null ? wrap(entry) : null;
     }
 
-    @Nonnull
-    public static BlockPos wrap(@Nonnull BlockPosition position) {
+    public static BlockPos wrap(BlockPosition position) {
         return new BlockPos(position.getX(), position.getY(), position.getZ());
     }
 
-    @Nonnull
-    public static UseItemOnPacket.BlockTargetResult wrap(@Nonnull BlockHitResult result) {
+    public static UseItemOnPacket.BlockTargetResult wrap(BlockHitResult result) {
         return new UseItemOnPacket.BlockTargetResult(result.getType().equals(HitResult.Type.MISS),
                 wrap(result.getLocation()), wrap(result.getBlockPos()), wrap(result.getDirection()), result.isInside());
     }
 
-    @Nonnull
-    public static BlockHitResult wrap(@Nonnull UseItemOnPacket.BlockTargetResult result) {
+    public static BlockHitResult wrap(UseItemOnPacket.BlockTargetResult result) {
         Vec3 location = new Vec3(result.getLocation().getX(), result.getLocation().getY(), result.getLocation().getZ());
         if (result.isMissed()) return BlockHitResult.miss(location, wrap(result.getSide()), wrap(result.getPosition()));
         return new BlockHitResult(location, wrap(result.getSide()), wrap(result.getPosition()), true);
     }
 
-    @Nonnull
-    public static Direction wrap(@Nonnull net.nonswag.tnl.listener.api.location.Direction direction) {
+    public static Direction wrap(net.nonswag.tnl.listener.api.location.Direction direction) {
         return switch (direction) {
             case UP -> net.minecraft.core.Direction.UP;
             case DOWN -> net.minecraft.core.Direction.DOWN;
@@ -397,8 +466,7 @@ public final class NMSHelper {
         };
     }
 
-    @Nonnull
-    public static net.nonswag.tnl.listener.api.location.Direction wrap(@Nonnull Direction direction) {
+    public static net.nonswag.tnl.listener.api.location.Direction wrap(Direction direction) {
         return switch (direction) {
             case UP -> net.nonswag.tnl.listener.api.location.Direction.UP;
             case DOWN -> net.nonswag.tnl.listener.api.location.Direction.DOWN;
@@ -409,30 +477,27 @@ public final class NMSHelper {
         };
     }
 
-    @Nonnull
-    public static Hand wrap(@Nonnull InteractionHand hand) {
+    public static Hand wrap(InteractionHand hand) {
         return switch (hand) {
             case MAIN_HAND -> Hand.MAIN_HAND;
             case OFF_HAND -> Hand.OFF_HAND;
         };
     }
 
-    @Nonnull
-    public static InteractionHand wrap(@Nonnull Hand hand) {
+    public static InteractionHand wrap(Hand hand) {
         return switch (hand) {
             case MAIN_HAND -> InteractionHand.MAIN_HAND;
             case OFF_HAND -> InteractionHand.OFF_HAND;
         };
     }
 
-    @Nonnull
-    public static BlockPos wrap(@Nonnull Location location) {
+    public static BlockPos wrap(Location location) {
         return new BlockPos(location.getX(), location.getY(), location.getZ());
     }
 
     @Nullable
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    public static SetBeaconPacket.Effect wrap(@Nonnull Optional<MobEffect> optional) {
+    public static SetBeaconPacket.Effect wrap(Optional<MobEffect> optional) {
         if (optional.isEmpty()) return null;
         return new SetBeaconPacket.Effect(switch (optional.get().getCategory()) {
             case HARMFUL -> SetBeaconPacket.Effect.Category.HARMFUL;
@@ -441,8 +506,7 @@ public final class NMSHelper {
         }, optional.get().getColor(), MobEffect.getId(optional.get()));
     }
 
-    @Nonnull
-    public static TNLItem wrap(@Nonnull ItemStack item) {
+    public static TNLItem wrap(ItemStack item) {
         return TNLItem.create(CraftItemStack.asBukkitCopy(item));
     }
 
@@ -451,8 +515,7 @@ public final class NMSHelper {
         return item != null ? wrap(item) : null;
     }
 
-    @Nonnull
-    public static NamespacedKey wrap(@Nonnull ResourceLocation resource) {
+    public static NamespacedKey wrap(ResourceLocation resource) {
         return new NamespacedKey(resource.getNamespace(), resource.getPath());
     }
 
@@ -461,29 +524,59 @@ public final class NMSHelper {
         return resource != null ? wrap(resource) : null;
     }
 
-    @Nonnull
-    public static HashMap<Integer, TNLItem> wrap(@Nonnull Int2ObjectMap<ItemStack> items) {
+    public static HashMap<Integer, TNLItem> wrap(Int2ObjectMap<ItemStack> items) {
         HashMap<Integer, TNLItem> result = new HashMap<>();
         items.forEach((integer, itemStack) -> result.put(integer, wrap(itemStack)));
         return result;
     }
 
-    @Nonnull
-    public static List<TNLItem> wrap(@Nonnull List<ItemStack> items, int dummy) {
+    public static BlockFace wrap(net.nonswag.tnl.listener.api.location.Direction direction, int dummy) {
+        return switch (direction) {
+            case DOWN -> BlockFace.DOWN;
+            case UP -> BlockFace.UP;
+            case NORTH -> BlockFace.NORTH;
+            case SOUTH -> BlockFace.SOUTH;
+            case WEST -> BlockFace.WEST;
+            case EAST -> BlockFace.EAST;
+        };
+    }
+
+    public static Interaction.Type wrap(int buttonId, ContainerClickPacket.ClickType clickType) {
+        return switch (clickType) {
+            case PICKUP -> buttonId == 0 ? Interaction.Type.LEFT : Interaction.Type.RIGHT;
+            case QUICK_MOVE, QUICK_CRAFT -> buttonId == 0 ? Interaction.Type.SHIFT_LEFT : Interaction.Type.SHIFT_RIGHT;
+            case SWAP -> switch (buttonId) {
+                case 0 -> Interaction.Type.NUMBER_KEY_1;
+                case 1 -> Interaction.Type.NUMBER_KEY_2;
+                case 2 -> Interaction.Type.NUMBER_KEY_3;
+                case 3 -> Interaction.Type.NUMBER_KEY_4;
+                case 4 -> Interaction.Type.NUMBER_KEY_5;
+                case 5 -> Interaction.Type.NUMBER_KEY_6;
+                case 6 -> Interaction.Type.NUMBER_KEY_7;
+                case 7 -> Interaction.Type.NUMBER_KEY_8;
+                case 8 -> Interaction.Type.NUMBER_KEY_9;
+                case 40 -> Interaction.Type.OFF_HAND;
+                default -> Interaction.Type.GENERAL;
+            };
+            case CLONE -> Interaction.Type.MIDDLE;
+            case THROW -> buttonId == 0 ? Interaction.Type.DROP : Interaction.Type.DROP_ALL;
+            case PICKUP_ALL -> Interaction.Type.DOUBLE_CLICK;
+        };
+    }
+
+    public static List<TNLItem> wrap(List<ItemStack> items, int dummy) {
         List<TNLItem> result = new ArrayList<>();
         items.forEach(itemStack -> result.add(wrap(itemStack)));
         return result;
     }
 
-    @Nonnull
-    public static Int2ObjectMap<ItemStack> wrap(@Nonnull HashMap<Integer, TNLItem> changedSlots) {
+    public static Int2ObjectMap<ItemStack> wrap(HashMap<Integer, TNLItem> changedSlots) {
         Int2ObjectMap<ItemStack> result = new Int2ObjectOpenHashMap<>();
         changedSlots.forEach((integer, itemStack) -> result.put((int) integer, wrap(itemStack)));
         return result;
     }
 
-    @Nonnull
-    public static ChatCommandPacket.Entry[] wrap(@Nonnull List<ArgumentSignatures.Entry> entries) {
+    public static ChatCommandPacket.Entry[] wrap(List<ArgumentSignatures.Entry> entries) {
         ChatCommandPacket.Entry[] signature = new ChatCommandPacket.Entry[entries.size()];
         for (int i = 0; i < entries.size(); i++) {
             ArgumentSignatures.Entry entry = entries.get(i);
@@ -492,18 +585,15 @@ public final class NMSHelper {
         return signature;
     }
 
-    @Nonnull
-    public static Vector wrap(@Nonnull Vec3i vec3i) {
+    public static Vector wrap(Vec3i vec3i) {
         return new Vector(vec3i.getX(), vec3i.getY(), vec3i.getZ());
     }
 
-    @Nonnull
-    public static Vector wrap(@Nonnull Vec3 vec3) {
+    public static Vector wrap(Vec3 vec3) {
         return new Vector(vec3.x(), vec3.y(), vec3.z());
     }
 
-    @Nonnull
-    public static BlockPosition wrap(@Nonnull BlockPos pos) {
+    public static BlockPosition wrap(BlockPos pos) {
         return new BlockPosition(pos.getX(), pos.getY(), pos.getZ());
     }
 }

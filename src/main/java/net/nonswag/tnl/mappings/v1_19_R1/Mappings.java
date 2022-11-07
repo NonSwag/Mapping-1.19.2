@@ -1,5 +1,8 @@
 package net.nonswag.tnl.mappings.v1_19_R1;
 
+import net.nonswag.core.api.annotation.FieldsAreNullableByDefault;
+import net.nonswag.core.api.annotation.MethodsReturnNonnullByDefault;
+import net.nonswag.tnl.listener.Bootstrap;
 import net.nonswag.tnl.listener.api.bossbar.TNLBossBar;
 import net.nonswag.tnl.listener.api.enchantment.Enchant;
 import net.nonswag.tnl.listener.api.entity.TNLArmorStand;
@@ -9,6 +12,8 @@ import net.nonswag.tnl.listener.api.item.ItemHelper;
 import net.nonswag.tnl.listener.api.item.TNLItem;
 import net.nonswag.tnl.listener.api.logger.LogManager;
 import net.nonswag.tnl.listener.api.mapper.Mapping;
+import net.nonswag.tnl.listener.api.packets.incoming.Incoming;
+import net.nonswag.tnl.listener.api.packets.outgoing.Outgoing;
 import net.nonswag.tnl.listener.api.player.GameProfile;
 import net.nonswag.tnl.listener.api.player.TNLPlayer;
 import net.nonswag.tnl.listener.api.plugin.PluginHelper;
@@ -29,7 +34,7 @@ import net.nonswag.tnl.mappings.v1_19_R1.api.packets.outgoing.OutgoingPacketMana
 import net.nonswag.tnl.mappings.v1_19_R1.api.player.NMSPlayer;
 import net.nonswag.tnl.mappings.v1_19_R1.api.plugin.NMSPluginHelper;
 import net.nonswag.tnl.mappings.v1_19_R1.api.world.NMSWorldHelper;
-import net.nonswag.tnl.mappings.v1_19_R1.listeners.PacketListener;
+import net.nonswag.tnl.mappings.v1_19_R1.listeners.GlobalPacketHandler;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -42,114 +47,100 @@ import org.bukkit.entity.Player;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.inventory.ItemStack;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.File;
 
+@FieldsAreNullableByDefault
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 @Mapping.Info(id = "Mapping-1.19.2", name = "Origin 1.19.2", authors = "NonSwag", description = "An official TNL-Production")
 public class Mappings extends Mapping {
 
-    public Mappings(@Nonnull File file) {
+    public Mappings(File file) {
         super(file);
     }
 
     @Override
     public void enable() {
-        getEventManager().registerListener(new PacketListener());
+        GlobalPacketHandler.init(Bootstrap.getInstance().getEventManager());
         async(() -> {
             if (Settings.AUTO_UPDATER.getValue()) new PluginUpdate(this).downloadUpdate();
         });
     }
 
-    @Nonnull
     @Override
     public Version getVersion() {
         return Version.v1_19_1;
     }
 
-    @Nonnull
     @Override
-    public TNLPlayer createPlayer(@Nonnull Player player) {
+    public TNLPlayer createPlayer(Player player) {
         return new NMSPlayer(player);
     }
 
-    @Nonnull
     @Override
-    public TNLItem createItem(@Nonnull ItemStack itemStack) {
+    public TNLItem createItem(ItemStack itemStack) {
         return new NMSItem(itemStack);
     }
 
-    @Nonnull
     @Override
-    public TNLBossBar createBossBar(@Nonnull String id, @Nonnull String text, @Nonnull BarColor color, @Nonnull BarStyle style, double progress, @Nonnull BarFlag... flags) {
+    public TNLBossBar createBossBar(String id, String text, BarColor color, BarStyle style, double progress, BarFlag... flags) {
         return new NMSBossBar(id, text, color, style, progress, flags);
     }
 
-    @Nonnull
     @Override
-    public TNLFallingBlock createFallingBlock(@Nonnull Location location, @Nonnull Material material) {
+    public TNLFallingBlock createFallingBlock(Location location, Material material) {
         return new NMSFallingBlock(location, material);
     }
 
-    @Nonnull
     @Override
-    public TNLArmorStand createArmorStand(@Nonnull World world, double x, double y, double z, float yaw, float pitch) {
+    public TNLArmorStand createArmorStand(World world, double x, double y, double z, float yaw, float pitch) {
         return new NMSArmorStand(world, x, y, z, yaw, pitch);
     }
 
-    @Nonnull
     @Override
-    public TNLEntityPlayer createEntityPlayer(@Nonnull World world, double x, double y, double z, float yaw, float pitch, @Nonnull GameProfile gameProfile) {
+    public TNLEntityPlayer createEntityPlayer(World world, double x, double y, double z, float yaw, float pitch, GameProfile gameProfile) {
         return new NMSEntityPlayer(world, x, y, z, yaw, pitch, gameProfile);
     }
 
-    @Nonnull
     @Override
-    public Enchant createEnchant(@Nonnull NamespacedKey key, @Nonnull String name, @Nonnull EnchantmentTarget target) {
+    public Enchant createEnchant(NamespacedKey key, String name, EnchantmentTarget target) {
         return new EnchantmentWrapper(key, name, target);
     }
 
-    @Nonnull
     @Override
     public ItemHelper itemHelper() {
         return itemHelper == null ? itemHelper = new NMSItemHelper() : itemHelper;
     }
 
-    @Nonnull
     @Override
     public PluginHelper pluginHelper() {
         return pluginHelper == null ? pluginHelper = new NMSPluginHelper() : pluginHelper;
     }
 
-    @Nonnull
     @Override
     public WorldHelper worldHelper() {
         return new NMSWorldHelper();
     }
 
-    @Nonnull
     @Override
     public LogManager logManager() {
         return logManager == null ? logManager = new NMSLogManager() : logManager;
     }
 
-    @Nonnull
     @Override
     public PacketManager packetManager() {
         return packetManager == null ? packetManager = new PacketManager() {
 
-            @Nullable
             private Outgoing outgoing;
-            @Nullable
             private Incoming incoming;
 
-            @Nonnull
             @Override
             public Outgoing outgoing() {
                 return outgoing == null ? outgoing = new OutgoingPacketManager() : outgoing;
             }
 
-            @Nonnull
             @Override
             public Incoming incoming() {
                 return incoming == null ? incoming = new IncomingPacketManager() : incoming;
@@ -159,7 +150,7 @@ public class Mappings extends Mapping {
 
     @Nullable
     @Override
-    public BiomeProvider getDefaultBiomeProvider(@Nonnull String name, @Nullable String id) {
+    public BiomeProvider getDefaultBiomeProvider(String name, @Nullable String id) {
         return null;
     }
 }
