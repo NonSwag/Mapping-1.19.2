@@ -2,11 +2,13 @@ package net.nonswag.tnl.mappings.v1_19_R1.api.packets.outgoing;
 
 import com.mojang.datafixers.util.Pair;
 import io.netty.buffer.Unpooled;
+import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.ServerScoreboard;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -14,6 +16,7 @@ import net.minecraft.world.phys.Vec3;
 import net.nonswag.core.api.annotation.FieldsAreNonnullByDefault;
 import net.nonswag.core.api.annotation.MethodsReturnNonnullByDefault;
 import net.nonswag.core.api.logger.Logger;
+import net.nonswag.tnl.listener.api.advancement.Advancement;
 import net.nonswag.tnl.listener.api.border.VirtualBorder;
 import net.nonswag.tnl.listener.api.item.SlotType;
 import net.nonswag.tnl.listener.api.item.TNLItem;
@@ -37,10 +40,7 @@ import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
 
 import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.nullable;
@@ -867,6 +867,22 @@ public final class OutgoingPacketManager implements Outgoing {
     }
 
     @Override
+    public UpdateAdvancementsPacket updateAdvancementsPacket(boolean reset, HashMap<NamespacedKey, Advancement.Builder> added, List<NamespacedKey> removed, HashMap<NamespacedKey, Advancement.Progress> progress) {
+        return new UpdateAdvancementsPacket(reset, added, removed, progress) {
+            @Override
+            public ClientboundUpdateAdvancementsPacket build() {
+                Collection<net.minecraft.advancements.Advancement> added = new ArrayList<>();
+                getAdded().forEach((key, builder) -> added.add(wrap(builder.build())));
+                Set<ResourceLocation> removed = new HashSet<>();
+                getRemoved().forEach(key -> removed.add(wrap(key)));
+                Map<ResourceLocation, AdvancementProgress> progress = new HashMap<>();
+                getProgress().forEach((key, advancementProgress) -> progress.put(wrap(key), wrap(advancementProgress)));
+                return new ClientboundUpdateAdvancementsPacket(isReset(), added, removed, progress);
+            }
+        };
+    }
+
+    @Override
     public <P> PacketBuilder map(P packet) {
         Function<P, PacketBuilder> original = p -> new PacketBuilder() {
             @Override
@@ -1072,6 +1088,13 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundSetBorderLerpSizePacket instance) {
             return SetBorderLerpSizePacket.create(instance.getOldSize(), instance.getNewSize(), instance.getLerpTime());
         } else if (packet instanceof ClientboundUpdateAdvancementsPacket instance) {
+            HashMap<NamespacedKey, Advancement.Builder> added = new HashMap<>();
+            List<NamespacedKey> removed = new ArrayList<>();
+            HashMap<NamespacedKey, Advancement.Progress> progress = new HashMap<>();
+            instance.getAdded().forEach((resource, builder) -> added.put(wrap(resource), wrap(builder)));
+            instance.getRemoved().forEach(resource -> removed.add(wrap(resource)));
+            instance.getProgress().forEach((resource, advancementProgress) -> progress.put(wrap(resource), wrap(advancementProgress)));
+            return UpdateAdvancementsPacket.create(instance.shouldReset(), added, removed, progress);
         } else if (packet instanceof ClientboundRemoveMobEffectPacket instance) {
         } else if (packet instanceof ClientboundSetHealthPacket instance) {
         } else if (packet instanceof ClientboundServerDataPacket instance) {

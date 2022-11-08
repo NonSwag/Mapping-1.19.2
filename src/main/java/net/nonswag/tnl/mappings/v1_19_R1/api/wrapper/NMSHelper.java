@@ -1,5 +1,6 @@
 package net.nonswag.tnl.mappings.v1_19_R1.api.wrapper;
 
+import com.google.gson.JsonObject;
 import com.mojang.brigadier.Message;
 import com.mojang.brigadier.context.StringRange;
 import com.mojang.brigadier.suggestion.Suggestion;
@@ -8,6 +9,9 @@ import io.papermc.paper.adventure.PaperAdventure;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.ChatFormatting;
+import net.minecraft.advancements.*;
+import net.minecraft.advancements.critereon.SerializationContext;
+import net.minecraft.commands.CommandFunction;
 import net.minecraft.commands.arguments.ArgumentSignatures;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -33,6 +37,8 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.nonswag.core.api.annotation.FieldsAreNonnullByDefault;
 import net.nonswag.core.api.annotation.MethodsReturnNonnullByDefault;
+import net.nonswag.core.api.reflection.Reflection;
+import net.nonswag.tnl.listener.api.advancement.Advancement;
 import net.nonswag.tnl.listener.api.gui.Interaction;
 import net.nonswag.tnl.listener.api.item.SlotType;
 import net.nonswag.tnl.listener.api.item.TNLItem;
@@ -56,15 +62,163 @@ import org.bukkit.util.Vector;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 @FieldsAreNonnullByDefault
 @ParametersAreNonnullByDefault
 @MethodsReturnNonnullByDefault
 public final class NMSHelper {
+
+    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", Locale.ROOT);
+
+    public static AdvancementProgress wrap(Advancement.Progress progress) {
+        HashMap<String, CriterionProgress> criteriaProgress = new HashMap<>();
+        progress.getProgress().forEach((name, criterionProgress) -> criteriaProgress.put(name, wrap(criterionProgress)));
+        AdvancementProgress advancementProgress = new AdvancementProgress();
+        Reflection.Field.setByType(advancementProgress, Map.class, criteriaProgress);
+        Reflection.Field.setByType(advancementProgress, String[][].class, progress.getRequirements());
+        return advancementProgress;
+    }
+
+    public static Advancement.Progress wrap(AdvancementProgress progress) {
+        HashMap<String, Advancement.Criterion.Progress> criteriaProgress = new HashMap<>();
+        String[][] requirements = Reflection.Field.getByType(progress, String[][].class);
+        Map<String, CriterionProgress> criteria = Reflection.Field.getByType(progress, Map.class);
+        criteria.forEach((name, criterionProgress) -> criteriaProgress.put(name, wrap(criterionProgress)));
+        return new Advancement.Progress(criteriaProgress, requirements);
+    }
+
+    private static CriterionProgress wrap(Advancement.Criterion.Progress progress) {
+        if (progress.getDateObtained() == null) return new CriterionProgress();
+        return CriterionProgress.fromJson(DATE_FORMAT.format(progress.getDateObtained()));
+    }
+
+    private static Advancement.Criterion.Progress wrap(CriterionProgress progress) {
+        return new Advancement.Criterion.Progress(progress.getObtained());
+    }
+
+    public static Advancement.Builder wrap(net.minecraft.advancements.Advancement.Builder builder) {
+        net.minecraft.advancements.Advancement parent = Reflection.Field.getByType(builder, net.minecraft.advancements.Advancement.class);
+        DisplayInfo display = Reflection.Field.getByType(builder, DisplayInfo.class);
+        AdvancementRewards rewards = Reflection.Field.getByType(builder, AdvancementRewards.class);
+        Map<String, Criterion> advancementCriteria = Reflection.Field.getByType(builder, Map.class);
+        String[][] requirements = Reflection.Field.getByType(builder, String[][].class);
+        RequirementsStrategy requirementsStrategy = Reflection.Field.getByType(builder, RequirementsStrategy.class);
+        if (requirements == null) requirements = requirementsStrategy.createRequirements(advancementCriteria.keySet());
+        HashMap<String, Advancement.Criterion<?>> criteria = new HashMap<>();
+        advancementCriteria.forEach((name, criterion) -> criteria.put(name, wrap(criterion)));
+        return Advancement.builder().parent(nullable(parent)).display(wrap(display)).rewards(wrap(rewards)).criteria(criteria).requirements(requirements);
+    }
+
+    public static net.minecraft.advancements.Advancement wrap(Advancement advancement) {
+        HashMap<String, Criterion> criteria = new HashMap<>();
+        Set<net.minecraft.advancements.Advancement> children = new HashSet<>();
+        advancement.getCriteria().forEach((name, criterion) -> criteria.put(name, wrap((Advancement.Criterion<SerializationContext>) criterion)));
+        advancement.getChildren().forEach(child -> children.add(wrap(child)));
+        net.minecraft.advancements.Advancement result = new net.minecraft.advancements.Advancement(wrap(advancement.getId()), nullable(advancement.getParent()),
+                nullable(advancement.getDisplay()), wrap(advancement.getRewards()), criteria, advancement.getRequirements());
+        Reflection.Field.setByType(result, Set.class, children);
+        return result;
+    }
+
+    public static Advancement wrap(net.minecraft.advancements.Advancement advancement) {
+        Advancement parent = nullable(advancement.getParent());
+        Advancement.DisplayInfo displayInfo = nullable(advancement.getDisplay());
+        Advancement.Rewards rewards = wrap(advancement.getRewards());
+        HashMap<String, Advancement.Criterion<?>> criteria = new HashMap<>();
+        advancement.getCriteria().forEach((name, criterion) -> criteria.put(name, wrap(criterion)));
+        List<Advancement> children = new ArrayList<>();
+        advancement.getChildren().forEach(child -> children.add(wrap(child)));
+        return new Advancement(wrap(advancement.getId()), parent, displayInfo, rewards, criteria,
+                advancement.getRequirements(), children, wrap(advancement.getChatComponent()));
+    }
+
+    private static Criterion wrap(Advancement.Criterion<SerializationContext> criterion) {
+        return new Criterion(new CriterionTriggerInstance() {
+            @Override
+            public ResourceLocation getCriterion() {
+                return wrap(criterion.getId());
+            }
+
+            @Override
+            public JsonObject serializeToJson(SerializationContext predicateSerializer) {
+                return criterion.serialize(predicateSerializer);
+            }
+        });
+    }
+
+    private static Advancement.Criterion<SerializationContext> wrap(Criterion criterion) {
+        if (criterion.getTrigger() == null) throw new NullPointerException("criterion");
+        return new Advancement.Criterion<>(wrap(criterion.getTrigger().getCriterion())) {
+            @Override
+            public JsonObject serialize(SerializationContext context) {
+                return criterion.getTrigger().serializeToJson(context);
+            }
+        };
+    }
+
+    private static AdvancementRewards wrap(Advancement.Rewards rewards) {
+        return new AdvancementRewards(rewards.getExperience(), wrap(rewards.getLoot()), wrap(rewards.getRecipes()),
+                new CommandFunction.CacheableFunction(nullable(rewards.getFunction())));
+    }
+
+    private static Advancement.Rewards wrap(AdvancementRewards rewards) {
+        Integer experience = Reflection.Field.getByType(rewards, int.class);
+        ResourceLocation[] loot = Reflection.Field.getByType(rewards, ResourceLocation[].class);
+        CommandFunction.CacheableFunction function = Reflection.Field.getByType(rewards, CommandFunction.CacheableFunction.class);
+        return new Advancement.Rewards(experience, wrap(loot), wrap(rewards.getRecipes()), nullable(function.getId()));
+    }
+
+    @Nullable
+    public static net.minecraft.advancements.Advancement nullable(@Nullable Advancement advancement) {
+        return advancement != null ? wrap(advancement) : null;
+    }
+
+    @Nullable
+    public static Advancement nullable(@Nullable net.minecraft.advancements.Advancement advancement) {
+        return advancement != null ? wrap(advancement) : null;
+    }
+
+    public static Advancement.DisplayInfo wrap(DisplayInfo displayInfo) {
+        return new Advancement.DisplayInfo(wrap(displayInfo.getIcon()), wrap(displayInfo.getTitle()), wrap(displayInfo.getDescription()),
+                nullable(displayInfo.getBackground()), wrap(displayInfo.getFrame()), displayInfo.shouldShowToast(),
+                displayInfo.shouldAnnounceChat(), displayInfo.isHidden(), displayInfo.getX(), displayInfo.getY());
+    }
+
+    public static DisplayInfo wrap(Advancement.DisplayInfo displayInfo) {
+        DisplayInfo info = new DisplayInfo(wrap(displayInfo.getIcon()), wrap(displayInfo.getTitle()), wrap(displayInfo.getDescription()),
+                nullable(displayInfo.getBackground()), wrap(displayInfo.getFrame()), displayInfo.isShowToast(),
+                displayInfo.isAnnounceChat(), displayInfo.isHidden());
+        info.setLocation(displayInfo.getX(), displayInfo.getY());
+        return info;
+    }
+
+    @Nullable
+    public static DisplayInfo nullable(@Nullable Advancement.DisplayInfo displayInfo) {
+        return displayInfo != null ? wrap(displayInfo) : null;
+    }
+
+    @Nullable
+    public static Advancement.DisplayInfo nullable(@Nullable DisplayInfo displayInfo) {
+        return displayInfo != null ? wrap(displayInfo) : null;
+    }
+
+    private static FrameType wrap(Advancement.FrameType frame) {
+        return switch (frame) {
+            case GOAL -> FrameType.GOAL;
+            case TASK -> FrameType.TASK;
+            case CHALLENGE -> FrameType.CHALLENGE;
+        };
+    }
+
+    private static Advancement.FrameType wrap(FrameType frame) {
+        return switch (frame) {
+            case GOAL -> Advancement.FrameType.GOAL;
+            case TASK -> Advancement.FrameType.TASK;
+            case CHALLENGE -> Advancement.FrameType.CHALLENGE;
+        };
+    }
 
     public static OpenScreenPacket.Type wrap(MenuType<?> type) {
         if (type.equals(MenuType.GENERIC_9x1)) return OpenScreenPacket.Type.CHEST_9X1;
@@ -513,6 +667,18 @@ public final class NMSHelper {
     @Nullable
     public static TNLItem nullable(@Nullable ItemStack item) {
         return item != null ? wrap(item) : null;
+    }
+
+    public static ResourceLocation[] wrap(NamespacedKey[] keys) {
+        ResourceLocation[] resources = new ResourceLocation[keys.length];
+        for (int i = 0; i < keys.length; i++) resources[i] = wrap(keys[i]);
+        return resources;
+    }
+
+    public static NamespacedKey[] wrap(ResourceLocation[] resources) {
+        NamespacedKey[] keys = new NamespacedKey[resources.length];
+        for (int i = 0; i < resources.length; i++) keys[i] = wrap(resources[i]);
+        return keys;
     }
 
     public static NamespacedKey wrap(ResourceLocation resource) {
