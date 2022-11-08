@@ -7,6 +7,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.ServerScoreboard;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.phys.Vec3;
@@ -843,6 +844,29 @@ public final class OutgoingPacketManager implements Outgoing {
     }
 
     @Override
+    public SetDefaultSpawnPositionPacket setDefaultSpawnPositionPacket(BlockPosition position, float angle) {
+        return new SetDefaultSpawnPositionPacket(position, angle) {
+            @Override
+            public ClientboundSetDefaultSpawnPositionPacket build() {
+                return new ClientboundSetDefaultSpawnPositionPacket(wrap(getPosition()), getAngle());
+            }
+        };
+    }
+
+    @Override
+    public SetScorePacket setScorePacket(SetScorePacket.Method method, @Nullable String objectiveName, String owner, int score) {
+        return new SetScorePacket(method, objectiveName, owner, score) {
+            @Override
+            public ClientboundSetScorePacket build() {
+                return new ClientboundSetScorePacket(switch (getMethod()) {
+                    case REMOVE -> ServerScoreboard.Method.REMOVE;
+                    case UPDATE -> ServerScoreboard.Method.CHANGE;
+                }, getObjectiveName(), getOwner(), getScore());
+            }
+        };
+    }
+
+    @Override
     public <P> PacketBuilder map(P packet) {
         Function<P, PacketBuilder> original = p -> new PacketBuilder() {
             @Override
@@ -930,6 +954,7 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundBlockDestructionPacket instance) {
             return BlockDestructionPacket.create(instance.getId(), wrap(instance.getPos()), instance.getProgress());
         } else if (packet instanceof ClientboundUpdateRecipesPacket instance) {
+
         } else if (packet instanceof ClientboundDisconnectPacket instance) {
             return DisconnectPacket.create(wrap(instance.getReason()));
         } else if (packet instanceof ClientboundSoundEntityPacket instance) {
@@ -974,6 +999,7 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundPlaceGhostRecipePacket instance) {
         } else if (packet instanceof ClientboundBlockUpdatePacket instance) {
         } else if (packet instanceof ClientboundSetDefaultSpawnPositionPacket instance) {
+            return SetDefaultSpawnPositionPacket.create(wrap(instance.getPos()), instance.getAngle());
         } else if (packet instanceof ClientboundOpenScreenPacket instance) {
             assert instance.getType() != null : "The screen type cannot be null";
             return OpenScreenPacket.create(instance.getContainerId(), wrap(instance.getType()), wrap(instance.getTitle()));
@@ -1052,6 +1078,10 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundSetPassengersPacket instance) {
             return SetPassengersPacket.create(instance.getVehicle(), instance.getPassengers());
         } else if (packet instanceof ClientboundSetScorePacket instance) {
+            return SetScorePacket.create(switch (instance.getMethod()) {
+                case REMOVE -> SetScorePacket.Method.REMOVE;
+                case CHANGE -> SetScorePacket.Method.UPDATE;
+            }, instance.getObjectiveName(), instance.getOwner(), instance.getScore());
         } else if (packet instanceof ClientboundPlayerLookAtPacket instance) {
         } else if (packet instanceof ClientboundLevelChunkWithLightPacket instance) {
             return original.apply(packet);
