@@ -30,10 +30,8 @@ import org.bukkit.util.Vector;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.Function;
 
 import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.nullable;
 import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.wrap;
@@ -144,11 +142,11 @@ public class IncomingPacketManager implements Incoming {
     }
 
     @Override
-    public CommandSuggestionPacket commandSuggestionPacket(int id, String partialCommand) {
-        return new CommandSuggestionPacket(id, partialCommand) {
+    public CommandSuggestionPacket commandSuggestionPacket(int id, String command) {
+        return new CommandSuggestionPacket(id, command) {
             @Override
             public ServerboundCommandSuggestionPacket build() {
-                return new ServerboundCommandSuggestionPacket(getId(), getPartialCommand());
+                return new ServerboundCommandSuggestionPacket(getId(), getCommand());
             }
         };
     }
@@ -687,6 +685,12 @@ public class IncomingPacketManager implements Incoming {
 
     @Override
     public <P> PacketBuilder map(P packet) {
+        Function<P, PacketBuilder> original = p -> new PacketBuilder() {
+            @Override
+            public P build() {
+                return p;
+            }
+        };
         if (packet instanceof ServerboundContainerClosePacket instance) {
             return ContainerClosePacket.create(instance.getContainerId());
         } else if (packet instanceof ServerboundResourcePackPacket instance) {
@@ -893,12 +897,12 @@ public class IncomingPacketManager implements Incoming {
         } else if (packet instanceof ServerboundUseItemOnPacket instance) {
             return UseItemOnPacket.create(wrap(instance.getHand()), wrap(instance.getHitResult()), instance.getSequence());
         }
-        Logger.error.println("Unmapped incoming packet: " + packet.getClass().getName());
-        return new PacketBuilder() {
-            @Override
-            public Object build() {
-                return packet;
-            }
-        };
+        if (!unmapped.contains(packet.getClass().getName())) {
+            unmapped.add(packet.getClass().getName());
+            Logger.warn.println("Unmapped incoming packet: " + packet.getClass().getName());
+        }
+        return original.apply(packet);
     }
+
+    private static final List<String> unmapped = new ArrayList<>();
 }

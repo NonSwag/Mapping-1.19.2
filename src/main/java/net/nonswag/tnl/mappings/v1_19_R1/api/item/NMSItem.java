@@ -2,7 +2,6 @@ package net.nonswag.tnl.mappings.v1_19_R1.api.item;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.datafixers.util.Pair;
-import net.kyori.adventure.text.event.HoverEvent;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.nonswag.core.api.logger.Logger;
@@ -73,11 +72,5 @@ public class NMSItem extends TNLItem {
         item.setTag(nbt.versioned());
         setItemMeta(CraftItemStack.getItemMeta(item));
         return this;
-    }
-
-    @Nonnull
-    @Override
-    public HoverEvent<HoverEvent.ShowItem> asHoverEvent() {
-        return super.asHoverEvent();
     }
 }

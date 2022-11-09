@@ -712,14 +712,12 @@ public class NMSPlayer extends TNLPlayer {
             }
 
             @Override
-            @SuppressWarnings("deprecation")
             public void uninject() {
                 try {
                     Channel channel = nms().networkManager.channel;
                     if (channel.pipeline().get(name) != null) {
                         channel.eventLoop().submit(() -> channel.pipeline().remove(name));
                     }
-                    getInjections().clear();
                     data().export();
                 } catch (Exception e) {
                     Logger.error.println(e);
@@ -738,12 +736,6 @@ public class NMSPlayer extends TNLPlayer {
                         @Override
                         public TNLPlayer getPlayer() {
                             return NMSPlayer.this;
-                        }
-
-                        @Override
-                        @Deprecated
-                        public boolean handleInjections(@Nonnull Object packet) {
-                            return NMSPlayer.this.handleInjections(packet);
                         }
                     });
                     injected = true;

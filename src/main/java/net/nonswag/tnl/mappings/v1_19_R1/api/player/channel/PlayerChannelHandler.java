@@ -21,7 +21,6 @@ public abstract class PlayerChannelHandler extends ChannelDuplexHandler {
     @SuppressWarnings("rawtypes")
     public void channelRead(ChannelHandlerContext context, Object packet) throws Exception {
         try {
-            if (!handleInjections(packet)) return;
             var readers = EventManager.getAllReaders();
             if (!readers.isEmpty()) {
                 AtomicBoolean cancelled = new AtomicBoolean();
@@ -41,7 +40,6 @@ public abstract class PlayerChannelHandler extends ChannelDuplexHandler {
     @SuppressWarnings("rawtypes")
     public void write(ChannelHandlerContext context, Object packet, ChannelPromise channel) throws Exception {
         try {
-            if (!handleInjections(packet)) return;
             var writers = EventManager.getAllWriters();
             if (!writers.isEmpty()) {
                 AtomicBoolean cancelled = new AtomicBoolean();
@@ -64,8 +62,6 @@ public abstract class PlayerChannelHandler extends ChannelDuplexHandler {
             e.printStackTrace();
         }
     }
-
-    public abstract boolean handleInjections(Object packet);
 
     public abstract TNLPlayer getPlayer();
 }

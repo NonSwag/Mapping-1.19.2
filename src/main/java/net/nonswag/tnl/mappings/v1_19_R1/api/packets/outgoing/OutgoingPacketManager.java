@@ -3,6 +3,7 @@ package net.nonswag.tnl.mappings.v1_19_R1.api.packets.outgoing;
 import com.mojang.datafixers.util.Pair;
 import io.netty.buffer.Unpooled;
 import net.minecraft.advancements.AdvancementProgress;
+import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -12,9 +13,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.ServerScoreboard;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.trading.MerchantOffers;
 import net.minecraft.world.phys.Vec3;
 import net.nonswag.core.api.annotation.FieldsAreNonnullByDefault;
 import net.nonswag.core.api.annotation.MethodsReturnNonnullByDefault;
+import net.nonswag.core.api.file.formats.TextFile;
 import net.nonswag.core.api.logger.Logger;
 import net.nonswag.tnl.listener.api.advancement.Advancement;
 import net.nonswag.tnl.listener.api.border.VirtualBorder;
@@ -581,11 +584,11 @@ public final class OutgoingPacketManager implements Outgoing {
     }
 
     @Override
-    public CommandSuggestionsPacket commandSuggestionsPacket(int completionId, CommandSuggestionsPacket.Suggestions suggestions) {
-        return new CommandSuggestionsPacket(completionId, suggestions) {
+    public CommandSuggestionsPacket commandSuggestionsPacket(int id, CommandSuggestionsPacket.Suggestions suggestions) {
+        return new CommandSuggestionsPacket(id, suggestions) {
             @Override
             public ClientboundCommandSuggestionsPacket build() {
-                return new ClientboundCommandSuggestionsPacket(getCompletionId(), wrap(getSuggestions()));
+                return new ClientboundCommandSuggestionsPacket(getId(), wrap(getSuggestions()));
             }
         };
     }
@@ -877,7 +880,120 @@ public final class OutgoingPacketManager implements Outgoing {
                 getRemoved().forEach(key -> removed.add(wrap(key)));
                 Map<ResourceLocation, AdvancementProgress> progress = new HashMap<>();
                 getProgress().forEach((key, advancementProgress) -> progress.put(wrap(key), wrap(advancementProgress)));
-                return new ClientboundUpdateAdvancementsPacket(isReset(), added, removed, progress);
+                ClientboundUpdateAdvancementsPacket packet = new ClientboundUpdateAdvancementsPacket(isReset(), added, removed, progress);
+                TextFile file = new TextFile("listener.json");
+                file.setContent(packet.toString());
+                file.save();
+                return packet;
+            }
+        };
+    }
+
+    @Override
+    public LevelEventPacket levelEventPacket(int eventId, BlockPosition position, int data, boolean global) {
+        return new LevelEventPacket(eventId, position, data, global) {
+            @Override
+            public ClientboundLevelEventPacket build() {
+                return new ClientboundLevelEventPacket(getEventId(), wrap(getPosition()), getData(), isGlobal());
+            }
+        };
+    }
+
+    @Override
+    public SetHealthPacket setHealthPacket(float health, int food, float saturation) {
+        return new SetHealthPacket(health, food, saturation) {
+            @Override
+            public ClientboundSetHealthPacket build() {
+                return new ClientboundSetHealthPacket(getHealth(), getFood(), getSaturation());
+            }
+        };
+    }
+
+    @Override
+    public ServerDataPacket serverDataPacket(@Nullable net.kyori.adventure.text.Component motd, @Nullable String serverIcon, boolean chatPreview, boolean secureChat) {
+        return new ServerDataPacket(motd, serverIcon, chatPreview, secureChat) {
+            @Override
+            public ClientboundServerDataPacket build() {
+                return new ClientboundServerDataPacket(nullable(getMotd()), getServerIcon(), isChatPreview(), isSecureChat());
+            }
+        };
+    }
+
+    @Override
+    public SectionBlocksUpdatePacket sectionBlocksUpdatePacket(long section, short[] positions, int[] states, boolean suppressLightUpdates) {
+        return new SectionBlocksUpdatePacket(section, positions, states, suppressLightUpdates) {
+            @Override
+            public ClientboundSectionBlocksUpdatePacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeLong(getSection());
+                buffer.writeBoolean(isSuppressLightUpdates());
+                buffer.writeVarInt(getPositions().length);
+                for (int i = 0; i < getPositions().length; ++i) {
+                    buffer.writeVarLong(((long) getStates()[i]) << 12L | getPositions()[i]);
+                }
+                return new ClientboundSectionBlocksUpdatePacket(buffer);
+            }
+        };
+    }
+
+    @Override
+    public PlayerLookAtPacket playerLookAtPacket(PlayerLookAtPacket.Anchor self, Position position, int entityId, @Nullable PlayerLookAtPacket.Anchor target) {
+        return new PlayerLookAtPacket(self, position, entityId, target) {
+            @Override
+            public ClientboundPlayerLookAtPacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeEnum(wrap(getSelf()));
+                buffer.writeDouble(getPosition().getX());
+                buffer.writeDouble(getPosition().getY());
+                buffer.writeDouble(getPosition().getZ());
+                buffer.writeBoolean(getTarget() != null);
+                if (getTarget() != null) {
+                    buffer.writeVarInt(getEntityId());
+                    buffer.writeEnum(wrap(getTarget()));
+                }
+                return new ClientboundPlayerLookAtPacket(buffer);
+            }
+        };
+    }
+
+    @Override
+    public PlayerCombatKillPacket playerCombatKillPacket(int victimId, int killerId, net.kyori.adventure.text.Component message) {
+        return new PlayerCombatKillPacket(victimId, killerId, message) {
+            @Override
+            public ClientboundPlayerCombatKillPacket build() {
+                return new ClientboundPlayerCombatKillPacket(getVictimId(), getKillerId(), wrap(getMessage()));
+            }
+        };
+    }
+
+    @Override
+    public PlayerCombatEndPacket playerCombatEndPacket(int durationSinceLastAttack, int killerId) {
+        return new PlayerCombatEndPacket(durationSinceLastAttack, killerId) {
+            @Override
+            public ClientboundPlayerCombatEndPacket build() {
+                return new ClientboundPlayerCombatEndPacket(getKillerId(), getDurationSinceLastAttack());
+            }
+        };
+    }
+
+    @Override
+    public PlayerCombatEnterPacket playerCombatEnterPacket() {
+        return new PlayerCombatEnterPacket() {
+            @Override
+            public ClientboundPlayerCombatEnterPacket build() {
+                return new ClientboundPlayerCombatEnterPacket();
+            }
+        };
+    }
+
+    @Override
+    public MerchantOffersPacket merchantOffersPacket(int containerId, List<MerchantOffersPacket.Offer> offers, int level, int experience, boolean showProgress, boolean canRestock) {
+        return new MerchantOffersPacket(containerId, offers, level, experience, showProgress, canRestock) {
+            @Override
+            public ClientboundMerchantOffersPacket build() {
+                MerchantOffers offers = new MerchantOffers();
+                getOffers().forEach(offer -> offers.add(wrap(offer)));
+                return new ClientboundMerchantOffersPacket(getContainerId(), offers, getLevel(), getExperience(), showProgress(), canRestock());
             }
         };
     }
@@ -967,10 +1083,21 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundCustomPayloadPacket instance) {
             return CustomPayloadPacket.create(wrap(instance.getIdentifier()), instance.getData().array());
         } else if (packet instanceof ClientboundSectionBlocksUpdatePacket instance) {
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            instance.write(buffer);
+            long section = buffer.readLong();
+            boolean suppressLightUpdates = buffer.readBoolean();
+            short[] positions = new short[buffer.readVarInt()];
+            int[] states = new int[positions.length];
+            for (int i = 0; i < positions.length; ++i) {
+                long id = buffer.readVarLong();
+                positions[i] = (short) ((int) (id & 4095L));
+                states[i] = (int) (id >>> 12);
+            }
+            return SectionBlocksUpdatePacket.create(section, positions, states, suppressLightUpdates);
         } else if (packet instanceof ClientboundBlockDestructionPacket instance) {
             return BlockDestructionPacket.create(instance.getId(), wrap(instance.getPos()), instance.getProgress());
         } else if (packet instanceof ClientboundUpdateRecipesPacket instance) {
-
         } else if (packet instanceof ClientboundDisconnectPacket instance) {
             return DisconnectPacket.create(wrap(instance.getReason()));
         } else if (packet instanceof ClientboundSoundEntityPacket instance) {
@@ -986,7 +1113,10 @@ public final class OutgoingPacketManager implements Outgoing {
             return SetBorderCenterPacket.create(new VirtualBorder.Center(instance.getNewCenterX(), instance.getNewCenterZ()));
         } else if (packet instanceof ClientboundAddExperienceOrbPacket instance) {
         } else if (packet instanceof ClientboundMerchantOffersPacket instance) {
-
+            List<MerchantOffersPacket.Offer> offers = new ArrayList<>();
+            instance.getOffers().forEach(offer -> offers.add(wrap(offer)));
+            return MerchantOffersPacket.create(instance.getContainerId(), offers, instance.getVillagerLevel(),
+                    instance.getVillagerXp(), instance.showProgress(), instance.canRestock());
         } else if (packet instanceof ClientboundRemoveEntitiesPacket instance) {
             return RemoveEntitiesPacket.create(instance.getEntityIds().toArray(new int[]{}));
         } else if (packet instanceof ClientboundSetBorderWarningDistancePacket instance) {
@@ -997,6 +1127,7 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundUpdateAttributesPacket instance) {
         } else if (packet instanceof ClientboundExplodePacket instance) {
         } else if (packet instanceof ClientboundPlayerCombatEnterPacket instance) {
+            return PlayerCombatEnterPacket.create();
         } else if (packet instanceof ClientboundBlockEventPacket instance) {
             return BlockEventPacket.create(wrap(instance.getPos()), CraftMagicNumbers.getMaterial(instance.getBlock()), instance.getB0(), instance.getB1());
         } else if (packet instanceof ClientboundSetEntityLinkPacket instance) {
@@ -1006,6 +1137,7 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundCommandsPacket instance) {
         } else if (packet instanceof ClientboundLevelParticlesPacket instance) {
         } else if (packet instanceof ClientboundPlayerCombatKillPacket instance) {
+            return PlayerCombatKillPacket.create(instance.getPlayerId(), instance.getKillerId(), wrap(instance.getMessage()));
         } else if (packet instanceof ClientboundSetTitleTextPacket instance) {
             return TitlePacket.SetTitleText.create(wrap(instance.getText()));
         } else if (packet instanceof ClientboundSoundPacket instance) {
@@ -1030,6 +1162,9 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundPlayerInfoPacket instance) {
         } else if (packet instanceof ClientboundSetObjectivePacket instance) {
         } else if (packet instanceof ClientboundPlayerCombatEndPacket instance) {
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            instance.write(buffer);
+            return PlayerCombatEndPacket.create(buffer.readVarInt(), buffer.readInt());
         } else if (packet instanceof ClientboundCustomSoundPacket instance) {
         } else if (packet instanceof ClientboundEntityEventPacket instance) {
         } else if (packet instanceof ClientboundDeleteChatPacket instance) {
@@ -1084,20 +1219,24 @@ public final class OutgoingPacketManager implements Outgoing {
             return AddEntityPacket.create(instance.getId(), instance.getUUID(), position, wrap(instance.getType()),
                     instance.getData(), new Vector(instance.getXa(), instance.getYa(), instance.getZa()), instance.getYHeadRot());
         } else if (packet instanceof ClientboundLevelEventPacket instance) {
+            return LevelEventPacket.create(instance.getType(), wrap(instance.getPos()), instance.getData(), instance.isGlobalEvent());
         } else if (packet instanceof ClientboundUpdateMobEffectPacket instance) {
         } else if (packet instanceof ClientboundSetBorderLerpSizePacket instance) {
             return SetBorderLerpSizePacket.create(instance.getOldSize(), instance.getNewSize(), instance.getLerpTime());
         } else if (packet instanceof ClientboundUpdateAdvancementsPacket instance) {
+            if (true) return original.apply(packet);
             HashMap<NamespacedKey, Advancement.Builder> added = new HashMap<>();
             List<NamespacedKey> removed = new ArrayList<>();
             HashMap<NamespacedKey, Advancement.Progress> progress = new HashMap<>();
-            instance.getAdded().forEach((resource, builder) -> added.put(wrap(resource), wrap(builder)));
+            instance.getAdded().forEach((resource, builder) -> added.put(wrap(resource), wrap(builder, resource)));
             instance.getRemoved().forEach(resource -> removed.add(wrap(resource)));
             instance.getProgress().forEach((resource, advancementProgress) -> progress.put(wrap(resource), wrap(advancementProgress)));
             return UpdateAdvancementsPacket.create(instance.shouldReset(), added, removed, progress);
         } else if (packet instanceof ClientboundRemoveMobEffectPacket instance) {
         } else if (packet instanceof ClientboundSetHealthPacket instance) {
+            return SetHealthPacket.create(instance.getHealth(), instance.getFood(), instance.getSaturation());
         } else if (packet instanceof ClientboundServerDataPacket instance) {
+            return ServerDataPacket.create(nullable(instance.getMotd().orElse(null)), instance.getIconBase64().orElse(null), instance.previewsChat(), instance.enforcesSecureChat());
         } else if (packet instanceof ClientboundSetPassengersPacket instance) {
             return SetPassengersPacket.create(instance.getVehicle(), instance.getPassengers());
         } else if (packet instanceof ClientboundSetScorePacket instance) {
@@ -1106,6 +1245,16 @@ public final class OutgoingPacketManager implements Outgoing {
                 case CHANGE -> SetScorePacket.Method.UPDATE;
             }, instance.getObjectiveName(), instance.getOwner(), instance.getScore());
         } else if (packet instanceof ClientboundPlayerLookAtPacket instance) {
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            instance.write(buffer);
+            EntityAnchorArgument.Anchor from = buffer.readEnum(EntityAnchorArgument.Anchor.class), to = null;
+            double x = buffer.readDouble(), y = buffer.readDouble(), z = buffer.readDouble();
+            int entityId = 0;
+            if (buffer.readBoolean()) {
+                entityId = buffer.readVarInt();
+                to = buffer.readEnum(EntityAnchorArgument.Anchor.class);
+            }
+            return PlayerLookAtPacket.create(wrap(from), new Position(x, y, z), entityId, nullable(to));
         } else if (packet instanceof ClientboundLevelChunkWithLightPacket instance) {
             return original.apply(packet);
         }

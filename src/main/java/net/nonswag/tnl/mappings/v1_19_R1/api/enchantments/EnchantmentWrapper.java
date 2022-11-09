@@ -79,7 +79,8 @@ public class EnchantmentWrapper extends Enchant {
     @Nonnull
     @Override
     protected Enchant register() {
-        Reflection.Field.set(Registry.ENCHANTMENT, MappedRegistry.class, "ca", false);
+        // Reflection.Field.set(Registry.ENCHANTMENT, MappedRegistry.class, "ca", false); // set boolean "frozen" to false
+        Reflection.Field.setByType(Registry.ENCHANTMENT, MappedRegistry.class, boolean.class, false);
         Registry.register(Registry.ENCHANTMENT, getNamespace().getKey(), getVanilla());
         return super.register();
     }

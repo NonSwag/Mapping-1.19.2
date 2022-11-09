@@ -13,6 +13,7 @@ import net.minecraft.advancements.*;
 import net.minecraft.advancements.critereon.SerializationContext;
 import net.minecraft.commands.CommandFunction;
 import net.minecraft.commands.arguments.ArgumentSignatures;
+import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
@@ -32,6 +33,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -70,7 +72,45 @@ import java.util.*;
 @MethodsReturnNonnullByDefault
 public final class NMSHelper {
 
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", Locale.ROOT);
+    public static MerchantOffersPacket.Offer wrap(MerchantOffer offer) {
+        MerchantOffersPacket.Offer.Builder builder = MerchantOffersPacket.Offer.builder();
+        builder.baseCost(wrap(offer.getBaseCostA())).extraCost(wrap(offer.getCostB())).result(wrap(offer.getResult())).uses(offer.getUses()).
+                maxUses(offer.getMaxUses()).rewardExp(offer.shouldRewardExp()).specialPrice(offer.getSpecialPriceDiff()).bonus(offer.getDemand()).
+                priceMultiplier(offer.getPriceMultiplier()).xp(offer.getXp()).ignoreDiscounts(offer.ignoreDiscounts);
+        return builder.build();
+    }
+
+    public static MerchantOffer wrap(MerchantOffersPacket.Offer offer) {
+        MerchantOffer merchantOffer = new MerchantOffer(wrap(offer.getBaseCost()), wrap(offer.getExtraCost()), wrap(offer.getResult()), offer.getUses(),
+                offer.getMaxUses(), offer.getXp(), offer.getPriceMultiplier(), offer.getBonus(), offer.isIgnoreDiscounts());
+        merchantOffer.setSpecialPriceDiff(offer.getSpecialPrice());
+        merchantOffer.rewardExp = offer.isRewardExp();
+        return merchantOffer;
+    }
+
+    public static PlayerLookAtPacket.Anchor wrap(EntityAnchorArgument.Anchor anchor) {
+        return switch (anchor) {
+            case FEET -> PlayerLookAtPacket.Anchor.FEET;
+            case EYES -> PlayerLookAtPacket.Anchor.EYES;
+        };
+    }
+
+    public static EntityAnchorArgument.Anchor wrap(PlayerLookAtPacket.Anchor anchor) {
+        return switch (anchor) {
+            case FEET -> EntityAnchorArgument.Anchor.FEET;
+            case EYES -> EntityAnchorArgument.Anchor.EYES;
+        };
+    }
+
+    @Nullable
+    public static PlayerLookAtPacket.Anchor nullable(@Nullable EntityAnchorArgument.Anchor anchor) {
+        return anchor != null ? wrap(anchor) : null;
+    }
+
+    @Nullable
+    public static EntityAnchorArgument.Anchor nullable(@Nullable PlayerLookAtPacket.Anchor anchor) {
+        return anchor != null ? wrap(anchor) : null;
+    }
 
     public static AdvancementProgress wrap(Advancement.Progress progress) {
         HashMap<String, CriterionProgress> criteriaProgress = new HashMap<>();
@@ -90,15 +130,16 @@ public final class NMSHelper {
     }
 
     private static CriterionProgress wrap(Advancement.Criterion.Progress progress) {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", Locale.ROOT);
         if (progress.getDateObtained() == null) return new CriterionProgress();
-        return CriterionProgress.fromJson(DATE_FORMAT.format(progress.getDateObtained()));
+        return CriterionProgress.fromJson(format.format(progress.getDateObtained()));
     }
 
     private static Advancement.Criterion.Progress wrap(CriterionProgress progress) {
         return new Advancement.Criterion.Progress(progress.getObtained());
     }
 
-    public static Advancement.Builder wrap(net.minecraft.advancements.Advancement.Builder builder) {
+    public static Advancement.Builder wrap(net.minecraft.advancements.Advancement.Builder builder, ResourceLocation resource) {
         net.minecraft.advancements.Advancement parent = Reflection.Field.getByType(builder, net.minecraft.advancements.Advancement.class);
         DisplayInfo display = Reflection.Field.getByType(builder, DisplayInfo.class);
         AdvancementRewards rewards = Reflection.Field.getByType(builder, AdvancementRewards.class);
@@ -108,7 +149,8 @@ public final class NMSHelper {
         if (requirements == null) requirements = requirementsStrategy.createRequirements(advancementCriteria.keySet());
         HashMap<String, Advancement.Criterion<?>> criteria = new HashMap<>();
         advancementCriteria.forEach((name, criterion) -> criteria.put(name, wrap(criterion)));
-        return Advancement.builder().parent(nullable(parent)).display(wrap(display)).rewards(wrap(rewards)).criteria(criteria).requirements(requirements);
+        return Advancement.builder().id(wrap(resource)).parent(nullable(parent)).display(nullable(display)).
+                rewards(wrap(rewards)).criteria(criteria).requirements(requirements).children(new ArrayList<>());
     }
 
     public static net.minecraft.advancements.Advancement wrap(Advancement advancement) {

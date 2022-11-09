@@ -50,6 +50,21 @@ import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.wrap;
 public class GlobalPacketHandler {
 
     public static void init(EventManager manager) {
+        registerPacketReader(manager);
+        // registerPacketWriter(manager);
+    }
+
+    private static void registerPacketWriter(EventManager manager) {
+        manager.registerPacketWriter((player, packet, cancelled) -> {
+            ((NMSPlayer) player).resourceManager().setResourcePackUrl(packet.getUrl());
+            ((NMSPlayer) player).resourceManager().setResourcePackHash(packet.getHash());
+        }, net.nonswag.tnl.listener.api.packets.outgoing.ResourcePackPacket.class);
+    }
+
+    private static void registerPacketReader(EventManager manager) {
+        manager.registerPacketReader((player, packet, cancelled) -> {
+            cancelled.set(true);
+        }, ChatAckPacket.class);
         manager.registerPacketReader((player, packet, cancelled) -> {
             if (!Settings.BETTER_CHAT.getValue()) return;
             PlayerChatEvent chatEvent = new PlayerChatEvent(player, packet.getMessage());
@@ -91,11 +106,11 @@ public class GlobalPacketHandler {
             if (entityEvent != null && !entityEvent.call()) cancelled.set(true);
         }, InteractPacket.class);
         manager.registerPacketReader((player, packet, cancelled) -> {
-            String[] args = packet.getPartialCommand().split(" ");
+            String[] args = packet.getCommand().split(" ");
             if (args.length > 0 && args[0].startsWith("/")) {
                 PermissionManager permissionManager = player.permissionManager();
-                if (!permissionManager.hasPermission(Settings.TAB_COMPLETE_BYPASS_PERMISSION.getValue())) return;
-                if (Settings.TAB_COMPLETER.getValue()) cancelled.set(true);
+                if (permissionManager.hasPermission(Settings.TAB_COMPLETE_BYPASS_PERMISSION.getValue())) return;
+                if (!Settings.TAB_COMPLETER.getValue()) cancelled.set(true);
             } else if (args.length == 0) cancelled.set(true);
         }, CommandSuggestionPacket.class);
         manager.registerPacketReader((player, packet, cancelled) -> {
@@ -132,13 +147,8 @@ public class GlobalPacketHandler {
                 textInputEvent.onTextInput(player, packet.getName());
             }
         }, RenameItemPacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
-            ((NMSPlayer) player).resourceManager().setStatus(packet.getAction());
-        }, ResourcePackPacket.class);
-        manager.registerPacketWriter((player, packet, cancelled) -> {
-            ((NMSPlayer) player).resourceManager().setResourcePackUrl(packet.getUrl());
-            ((NMSPlayer) player).resourceManager().setResourcePackHash(packet.getHash());
-        }, net.nonswag.tnl.listener.api.packets.outgoing.ResourcePackPacket.class);
+        manager.registerPacketReader((player, packet, cancelled) ->
+                ((NMSPlayer) player).resourceManager().setStatus(packet.getAction()), ResourcePackPacket.class);
         manager.registerPacketReader((player, packet, cancelled) -> {
             GUI gui = player.interfaceManager().getGUI();
             if (gui == null) return;
