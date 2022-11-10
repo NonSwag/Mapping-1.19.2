@@ -449,11 +449,11 @@ public class NMSPlayer extends TNLPlayer {
                     PlayerInfoPacket.create(player, PlayerInfoPacket.Action.REMOVE_PLAYER).send(receiver);
                     Reflection.Field.set(entity, Entity.class, "id", getPlayer().getEntityId());
                     PlayerInfoPacket.create(player, PlayerInfoPacket.Action.ADD_PLAYER).send(receiver);
-                    NamedEntitySpawnPacket.create(player).send(receiver);
+                    AddPlayerPacket.create(player).send(receiver);
                 } else if (entity instanceof TNLEntityLiving livingEntity) {
                     Reflection.Field.set(entity, Entity.class, "id", getPlayer().getEntityId());
                     LivingEntitySpawnPacket.create(livingEntity.bukkit()).send(receiver);
-                    EntityEquipmentPacket.create(livingEntity.bukkit()).send(receiver);
+                    SetEquipmentPacket.create(livingEntity.bukkit()).send(receiver);
                 } else {
                     Reflection.Field.set(entity, Entity.class, "id", getPlayer().getEntityId());
                     AddEntityPacket.create(entity.bukkit()).send(receiver);

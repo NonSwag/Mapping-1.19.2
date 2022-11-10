@@ -429,7 +429,7 @@ public final class NMSHelper {
         };
     }
 
-    public static ClientboundGameEventPacket.Type wrap(GameStateChangePacket.Identifier identifier) {
+    public static ClientboundGameEventPacket.Type wrap(GameEventPacket.Identifier identifier) {
         return switch (identifier.getId()) {
             case 0 -> ClientboundGameEventPacket.NO_RESPAWN_BLOCK_AVAILABLE;
             case 1 -> ClientboundGameEventPacket.START_RAINING;
@@ -447,31 +447,31 @@ public final class NMSHelper {
         };
     }
 
-    public static GameStateChangePacket.Identifier wrap(ClientboundGameEventPacket.Type type) {
+    public static GameEventPacket.Identifier wrap(ClientboundGameEventPacket.Type type) {
         if (type.equals(ClientboundGameEventPacket.NO_RESPAWN_BLOCK_AVAILABLE)) {
-            return GameStateChangePacket.NO_RESPAWN_BLOCK_AVAILABLE;
+            return GameEventPacket.NO_RESPAWN_BLOCK_AVAILABLE;
         } else if (type.equals(ClientboundGameEventPacket.START_RAINING)) {
-            return GameStateChangePacket.START_RAINING;
+            return GameEventPacket.START_RAINING;
         } else if (type.equals(ClientboundGameEventPacket.STOP_RAINING)) {
-            return GameStateChangePacket.STOP_RAINING;
+            return GameEventPacket.STOP_RAINING;
         } else if (type.equals(ClientboundGameEventPacket.CHANGE_GAME_MODE)) {
-            return GameStateChangePacket.CHANGE_GAMEMODE;
+            return GameEventPacket.CHANGE_GAMEMODE;
         } else if (type.equals(ClientboundGameEventPacket.WIN_GAME)) {
-            return GameStateChangePacket.WIN_GAME;
+            return GameEventPacket.WIN_GAME;
         } else if (type.equals(ClientboundGameEventPacket.DEMO_EVENT)) {
-            return GameStateChangePacket.DEMO_EVENT;
+            return GameEventPacket.DEMO_EVENT;
         } else if (type.equals(ClientboundGameEventPacket.ARROW_HIT_PLAYER)) {
-            return GameStateChangePacket.ARROW_HIT_PLAYER;
+            return GameEventPacket.ARROW_HIT_PLAYER;
         } else if (type.equals(ClientboundGameEventPacket.RAIN_LEVEL_CHANGE)) {
-            return GameStateChangePacket.RAIN_LEVEL_CHANGE;
+            return GameEventPacket.RAIN_LEVEL_CHANGE;
         } else if (type.equals(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE)) {
-            return GameStateChangePacket.THUNDER_LEVEL_CHANGE;
+            return GameEventPacket.THUNDER_LEVEL_CHANGE;
         } else if (type.equals(ClientboundGameEventPacket.PUFFER_FISH_STING)) {
-            return GameStateChangePacket.PUFFER_FISH_STING;
+            return GameEventPacket.PUFFER_FISH_STING;
         } else if (type.equals(ClientboundGameEventPacket.GUARDIAN_ELDER_EFFECT)) {
-            return GameStateChangePacket.GUARDIAN_ELDER_EFFECT;
+            return GameEventPacket.GUARDIAN_ELDER_EFFECT;
         } else if (type.equals(ClientboundGameEventPacket.IMMEDIATE_RESPAWN)) {
-            return GameStateChangePacket.IMMEDIATE_RESPAWN;
+            return GameEventPacket.IMMEDIATE_RESPAWN;
         } else throw new IllegalStateException("Unmapped game event type");
     }
 

@@ -3,6 +3,7 @@ package net.nonswag.tnl.mappings.v1_19_R1.api.packets.incoming;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.MessageSignature;
+import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
@@ -681,6 +682,68 @@ public class IncomingPacketManager implements Incoming {
                 return new ServerboundContainerClosePacket(getContainerId());
             }
         };
+    }
+
+    private final HashMap<Class<? extends Packet<ServerGamePacketListener>>, Class<? extends PacketBuilder>> PACKET_MAP = new HashMap<>() {{
+        put(ServerboundAcceptTeleportationPacket.class, AcceptTeleportationPacket.class);
+        put(ServerboundBlockEntityTagQuery.class, BlockEntityTagQueryPacket.class);
+        put(ServerboundChangeDifficultyPacket.class, ChangeDifficultyPacket.class);
+        put(ServerboundChatAckPacket.class, ChatAckPacket.class);
+        put(ServerboundChatCommandPacket.class, ChatCommandPacket.class);
+        put(ServerboundChatPacket.class, ChatPacket.class);
+        put(ServerboundChatPreviewPacket.class, ChatPreviewPacket.class);
+        put(ServerboundClientCommandPacket.class, ClientCommandPacket.class);
+        put(ServerboundClientInformationPacket.class, ClientInformationPacket.class);
+        put(ServerboundCommandSuggestionPacket.class, CommandSuggestionPacket.class);
+        put(ServerboundContainerButtonClickPacket.class, ContainerButtonClickPacket.class);
+        put(ServerboundContainerClickPacket.class, ContainerClickPacket.class);
+        put(ServerboundContainerClosePacket.class, ContainerClosePacket.class);
+        put(ServerboundCustomPayloadPacket.class, CustomPayloadPacket.class);
+        put(ServerboundEditBookPacket.class, EditBookPacket.class);
+        put(ServerboundEntityTagQuery.class, EntityTagQueryPacket.class);
+        put(ServerboundInteractPacket.class, InteractPacket.class);
+        put(ServerboundJigsawGeneratePacket.class, JigsawGeneratePacket.class);
+        put(ServerboundKeepAlivePacket.class, KeepAlivePacket.class);
+        put(ServerboundLockDifficultyPacket.class, LockDifficultyPacket.class);
+        put(ServerboundMovePlayerPacket.class, MovePlayerPacket.class);
+        put(ServerboundMovePlayerPacket.Pos.class, MovePlayerPacket.Position.class);
+        put(ServerboundMovePlayerPacket.Rot.class, MovePlayerPacket.Rotation.class);
+        put(ServerboundMovePlayerPacket.PosRot.class, MovePlayerPacket.PositionRotation.class);
+        put(ServerboundMovePlayerPacket.StatusOnly.class, MovePlayerPacket.Status.class);
+        put(ServerboundMoveVehiclePacket.class, MoveVehiclePacket.class);
+        put(ServerboundPaddleBoatPacket.class, PaddleBoatPacket.class);
+        put(ServerboundPickItemPacket.class, PickItemPacket.class);
+        put(ServerboundPlaceRecipePacket.class, PlaceRecipePacket.class);
+        put(ServerboundPlayerAbilitiesPacket.class, PlayerAbilitiesPacket.class);
+        put(ServerboundPlayerActionPacket.class, PlayerActionPacket.class);
+        put(ServerboundPlayerCommandPacket.class, PlayerCommandPacket.class);
+        put(ServerboundPlayerInputPacket.class, PlayerInputPacket.class);
+        put(ServerboundPongPacket.class, PongPacket.class);
+        put(ServerboundRecipeBookChangeSettingsPacket.class, RecipeBookChangeSettingsPacket.class);
+        put(ServerboundRecipeBookSeenRecipePacket.class, RecipeBookSeenRecipePacket.class);
+        put(ServerboundRenameItemPacket.class, RenameItemPacket.class);
+        put(ServerboundResourcePackPacket.class, ResourcePackPacket.class);
+        put(ServerboundSeenAdvancementsPacket.class, SeenAdvancementsPacket.class);
+        put(ServerboundSelectTradePacket.class, SelectTradePacket.class);
+        put(ServerboundSetBeaconPacket.class, SetBeaconPacket.class);
+        put(ServerboundSetCarriedItemPacket.class, SetCarriedItemPacket.class);
+        put(ServerboundSetCommandBlockPacket.class, SetCommandBlockPacket.class);
+        put(ServerboundSetCommandMinecartPacket.class, SetCommandMinecartPacket.class);
+        put(ServerboundSetCreativeModeSlotPacket.class, SetCreativeModeSlotPacket.class);
+        put(ServerboundSetJigsawBlockPacket.class, SetJigsawBlockPacket.class);
+        put(ServerboundSetStructureBlockPacket.class, SetStructureBlockPacket.class);
+        put(ServerboundSignUpdatePacket.class, SignUpdatePacket.class);
+        put(ServerboundSwingPacket.class, SwingPacket.class);
+        put(ServerboundTeleportToEntityPacket.class, TeleportToEntityPacket.class);
+        put(ServerboundUseItemOnPacket.class, UseItemOnPacket.class);
+        put(ServerboundUseItemPacket.class, UseItemPacket.class);
+    }};
+
+    @Override
+    public <P> Class<? extends IncomingPacket> map(Class<P> clazz) {
+        Class<? extends PacketBuilder> aClass = PACKET_MAP.get(clazz);
+        if (aClass != null) return aClass;
+        throw new IllegalStateException("Unmapped incoming packet: " + clazz.getName());
     }
 
     @Override

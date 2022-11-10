@@ -51,39 +51,37 @@ public class GlobalPacketHandler {
 
     public static void init(EventManager manager) {
         registerPacketReader(manager);
-        // registerPacketWriter(manager);
+        registerPacketWriter(manager);
     }
 
     private static void registerPacketWriter(EventManager manager) {
-        manager.registerPacketWriter((player, packet, cancelled) -> {
+        manager.registerPacketWriter(net.nonswag.tnl.listener.api.packets.outgoing.ResourcePackPacket.class, (player, packet, cancelled) -> {
             ((NMSPlayer) player).resourceManager().setResourcePackUrl(packet.getUrl());
             ((NMSPlayer) player).resourceManager().setResourcePackHash(packet.getHash());
-        }, net.nonswag.tnl.listener.api.packets.outgoing.ResourcePackPacket.class);
+        });
     }
 
     private static void registerPacketReader(EventManager manager) {
-        manager.registerPacketReader((player, packet, cancelled) -> {
-            cancelled.set(true);
-        }, ChatAckPacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
+        manager.registerPacketReader(ChatAckPacket.class, (player, packet, cancelled) -> cancelled.set(true));
+        manager.registerPacketReader(ChatPacket.class, (player, packet, cancelled) -> {
             if (!Settings.BETTER_CHAT.getValue()) return;
             PlayerChatEvent chatEvent = new PlayerChatEvent(player, packet.getMessage());
             if (chatEvent.isCommand()) return;
             player.messenger().chat(chatEvent);
             cancelled.set(true);
-        }, ChatPacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
+        });
+        manager.registerPacketReader(ClientCommandPacket.class, (player, packet, cancelled) -> {
             if (!packet.getAction().equals(ClientCommandPacket.Action.REQUEST_STATS)) return;
             cancelled.set(true);
-        }, ClientCommandPacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
+        });
+        manager.registerPacketReader(ClientInformationPacket.class, (player, packet, cancelled) -> {
             Language language = Language.fromLocale(packet.getLanguage());
             Language old = player.data().getLanguage();
             if (language.equals(Language.UNKNOWN) || language.equals(old)) return;
             player.data().setLanguage(language);
             new PlayerLanguageChangeEvent(player, old).call();
-        }, ClientInformationPacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
+        });
+        manager.registerPacketReader(InteractPacket.class, (player, packet, cancelled) -> {
             Entity entity = ((CraftWorld) player.worldManager().getWorld()).getHandle().getEntityLookup().get(packet.getEntityId());
             TNLEvent entityEvent = null;
             if (packet instanceof InteractPacket.Attack && entity != null) {
@@ -104,16 +102,16 @@ public class GlobalPacketHandler {
                 }
             }
             if (entityEvent != null && !entityEvent.call()) cancelled.set(true);
-        }, InteractPacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
+        });
+        manager.registerPacketReader(CommandSuggestionPacket.class, (player, packet, cancelled) -> {
             String[] args = packet.getCommand().split(" ");
             if (args.length > 0 && args[0].startsWith("/")) {
                 PermissionManager permissionManager = player.permissionManager();
                 if (permissionManager.hasPermission(Settings.TAB_COMPLETE_BYPASS_PERMISSION.getValue())) return;
                 if (!Settings.TAB_COMPLETER.getValue()) cancelled.set(true);
             } else if (args.length == 0) cancelled.set(true);
-        }, CommandSuggestionPacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
+        });
+        manager.registerPacketReader(CustomPayloadPacket.class, (player, packet, cancelled) -> {
             cancelled.set(true);
             String namespace = packet.getChannel().getNamespace();
             try {
@@ -127,8 +125,8 @@ public class GlobalPacketHandler {
             } catch (Exception e) {
                 Logger.error.println("An error occurred while reading a mod message from <'" + namespace + "'>", e);
             }
-        }, CustomPayloadPacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
+        });
+        manager.registerPacketReader(SignUpdatePacket.class, (player, packet, cancelled) -> {
             SignMenu menu = player.interfaceManager().getSignMenu();
             if (menu == null) return;
             cancelled.set(true);
@@ -138,18 +136,18 @@ public class GlobalPacketHandler {
             });
             if (menu.getLocation() != null) player.worldManager().sendBlockChange(menu.getLocation());
             player.interfaceManager().closeSignMenu();
-        }, SignUpdatePacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
+        });
+        manager.registerPacketReader(RenameItemPacket.class, (player, packet, cancelled) -> {
             GUI gui = player.interfaceManager().getGUI();
             if (!(gui instanceof AnvilGUI anvil)) return;
             cancelled.set(true);
             for (AnvilGUI.TextInputEvent textInputEvent : anvil.getTextInputEvents()) {
                 textInputEvent.onTextInput(player, packet.getName());
             }
-        }, RenameItemPacket.class);
-        manager.registerPacketReader((player, packet, cancelled) ->
-                ((NMSPlayer) player).resourceManager().setStatus(packet.getAction()), ResourcePackPacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
+        });
+        manager.registerPacketReader(ResourcePackPacket.class, (player, packet, cancelled) ->
+                ((NMSPlayer) player).resourceManager().setStatus(packet.getAction()));
+        manager.registerPacketReader(ContainerClickPacket.class, (player, packet, cancelled) -> {
             GUI gui = player.interfaceManager().getGUI();
             if (gui == null) return;
             if (packet.getSlot() < gui.getSize() && packet.getSlot() >= 0) {
@@ -167,8 +165,8 @@ public class GlobalPacketHandler {
             ContainerSetSlotPacket.create(-1, -1, null).send(player);
             player.inventoryManager().updateInventory();
             player.interfaceManager().updateGUI();
-        }, ContainerClickPacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
+        });
+        manager.registerPacketReader(ContainerClosePacket.class, (player, packet, cancelled) -> {
             GUI gui = player.interfaceManager().getGUI();
             if (gui == null) return;
             cancelled.set(true);
@@ -179,16 +177,16 @@ public class GlobalPacketHandler {
                 if (gui.getCloseSound() != null) player.soundManager().playSound(gui.getCloseSound());
                 player.interfaceManager().closeGUI(false);
             }
-        }, ContainerClosePacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
+        });
+        manager.registerPacketReader(PickItemPacket.class, (player, packet, cancelled) -> {
             if (!new PlayerItemPickEvent(player, packet.getSlot()).call()) cancelled.set(true);
-        }, PickItemPacket.class);
-        manager.registerPacketWriter((player, packet, cancelled) -> {
+        });
+        manager.registerPacketWriter(AddEntityPacket.class, (player, packet, cancelled) -> {
             EntityType type = packet.getEntityType();
             if (Settings.BETTER_FALLING_BLOCKS.getValue() && type.equals(EntityType.FALLING_BLOCK)) cancelled.set(true);
             else if (Settings.BETTER_TNT.getValue() && type.equals(EntityType.PRIMED_TNT)) cancelled.set(true);
-        }, AddEntityPacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
+        });
+        manager.registerPacketReader(UseItemOnPacket.class, (player, packet, cancelled) -> {
             BlockPosition position = packet.getTarget().getPosition();
             Block block = new Location(player.worldManager().getWorld(), position.getX(), position.getY(), position.getZ()).getBlock();
             if (block.getLocation().distance(player.worldManager().getLocation()) > 10) {
@@ -209,14 +207,14 @@ public class GlobalPacketHandler {
                     player.worldManager().sendBlockChange(interactEvent.getClickedBlock().getRelative(face));
                 }
             }, 1);
-        }, UseItemOnPacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
+        });
+        manager.registerPacketReader(ContainerClosePacket.class, (player, packet, cancelled) -> {
             GUI gui = player.interfaceManager().getGUI();
             if (gui == null) return;
             if (gui.getCloseSound() != null) player.soundManager().playSound(gui.getCloseSound());
             gui.getCloseListener().onClose(player, true);
-        }, ContainerClosePacket.class);
-        manager.registerPacketReader((player, packet, cancelled) -> {
+        });
+        manager.registerPacketReader(PlayerActionPacket.class, (player, packet, cancelled) -> {
             if (packet.getAction().ordinal() > 2) return;
             PlayerDamageBlockEvent.BlockDamageType damageType = PlayerDamageBlockEvent.BlockDamageType.fromString(packet.getAction().name());
             if (damageType.isUnknown()) return;
@@ -242,7 +240,7 @@ public class GlobalPacketHandler {
             } else if (blockEvent.getBlockDamageType().isItemAction()) {
                 player.inventoryManager().updateInventory();
             }
-        }, PlayerActionPacket.class);
+        });
     }
             /*
         } else if (event.getPacket() instanceof PacketPlayInBlockPlace packet) {

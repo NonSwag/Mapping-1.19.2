@@ -4,9 +4,11 @@ import com.mojang.datafixers.util.Pair;
 import io.netty.buffer.Unpooled;
 import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
@@ -14,6 +16,7 @@ import net.minecraft.server.ServerScoreboard;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.trading.MerchantOffers;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import net.nonswag.core.api.annotation.FieldsAreNonnullByDefault;
 import net.nonswag.core.api.annotation.MethodsReturnNonnullByDefault;
@@ -32,12 +35,14 @@ import org.bukkit.*;
 import org.bukkit.boss.BossBar;
 import org.bukkit.craftbukkit.v1_19_R1.boss.CraftBossBar;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftHumanEntity;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.v1_19_R1.util.CraftMagicNumbers;
-import org.bukkit.entity.*;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
@@ -145,8 +150,8 @@ public final class OutgoingPacketManager implements Outgoing {
     }
 
     @Override
-    public CameraPacket cameraPacket(int targetId) {
-        return new CameraPacket(targetId) {
+    public SetCameraPacket setCameraPacket(int targetId) {
+        return new SetCameraPacket(targetId) {
             @Override
             public ClientboundSetCameraPacket build() {
                 FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
@@ -197,8 +202,8 @@ public final class OutgoingPacketManager implements Outgoing {
     }
 
     @Override
-    public AnimationPacket animationPacket(int entityId, AnimationPacket.Animation animation) {
-        return new AnimationPacket(entityId, animation) {
+    public AnimatePacket animatePacket(int entityId, AnimatePacket.Animation animation) {
+        return new AnimatePacket(entityId, animation) {
             @Override
             public ClientboundAnimatePacket build() {
                 FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
@@ -233,8 +238,8 @@ public final class OutgoingPacketManager implements Outgoing {
     }
 
     @Override
-    public EntityEquipmentPacket entityEquipmentPacket(int entityId, HashMap<SlotType, TNLItem> equipment) {
-        return new EntityEquipmentPacket(entityId, equipment) {
+    public SetEquipmentPacket setEquipmentPacket(int entityId, HashMap<SlotType, TNLItem> equipment) {
+        return new SetEquipmentPacket(entityId, equipment) {
             @Override
             public ClientboundSetEquipmentPacket build() {
                 List<Pair<EquipmentSlot, net.minecraft.world.item.ItemStack>> equipment = new ArrayList<>();
@@ -245,8 +250,8 @@ public final class OutgoingPacketManager implements Outgoing {
     }
 
     @Override
-    public GameStateChangePacket gameStateChangePacket(GameStateChangePacket.Identifier identifier, float state) {
-        return new GameStateChangePacket(identifier, state) {
+    public GameEventPacket gameEventPacket(GameEventPacket.Identifier identifier, float state) {
+        return new GameEventPacket(identifier, state) {
             @Override
             public ClientboundGameEventPacket build() {
                 return new ClientboundGameEventPacket(wrap(getIdentifier()), getState());
@@ -374,11 +379,19 @@ public final class OutgoingPacketManager implements Outgoing {
     }
 
     @Override
-    public NamedEntitySpawnPacket namedEntitySpawnPacket(HumanEntity human) {
-        return new NamedEntitySpawnPacket(human) {
+    public AddPlayerPacket addPlayerPacket(int entityId, UUID uniqueId, Position position) {
+        return new AddPlayerPacket(entityId, uniqueId, position) {
             @Override
             public ClientboundAddPlayerPacket build() {
-                return new ClientboundAddPlayerPacket(((CraftHumanEntity) getHuman()).getHandle());
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeVarInt(getEntityId());
+                buffer.writeUUID(getUniqueId());
+                buffer.writeDouble(getPosition().getX());
+                buffer.writeDouble(getPosition().getY());
+                buffer.writeDouble(getPosition().getZ());
+                buffer.writeByte((int) getPosition().getYaw());
+                buffer.writeByte((int) getPosition().getPitch());
+                return new ClientboundAddPlayerPacket(buffer);
             }
         };
     }
@@ -450,8 +463,8 @@ public final class OutgoingPacketManager implements Outgoing {
     }
 
     @Override
-    public UpdateTimePacket updateTimePacket(long age, long timestamp, boolean cycle) {
-        return new UpdateTimePacket(age, timestamp, cycle) {
+    public SetTimePacket setTimePacket(long age, long timestamp, boolean cycle) {
+        return new SetTimePacket(age, timestamp, cycle) {
             @Override
             public ClientboundSetTimePacket build() {
                 return new ClientboundSetTimePacket(getAge(), getTimestamp(), isCycle());
@@ -999,6 +1012,234 @@ public final class OutgoingPacketManager implements Outgoing {
     }
 
     @Override
+    public AddExperienceOrbPacket addExperienceOrbPacket(int entityId, Position position, int value) {
+        return new AddExperienceOrbPacket(entityId, position, value) {
+            @Override
+            public ClientboundAddExperienceOrbPacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeVarInt(getEntityId());
+                buffer.writeDouble(getPosition().getX());
+                buffer.writeDouble(getPosition().getY());
+                buffer.writeDouble(getPosition().getZ());
+                buffer.writeShort(getValue());
+                return new ClientboundAddExperienceOrbPacket(buffer);
+            }
+        };
+    }
+
+    @Override
+    public ExplodePacket explodePacket(Position position, float radius, List<BlockPosition> affectedBlocks, Vector knockback) {
+        return new ExplodePacket(position, radius, affectedBlocks, knockback) {
+            @Override
+            public ClientboundExplodePacket build() {
+                List<BlockPos> affectedBlocks = new ArrayList<>();
+                getAffectedBlocks().forEach(position -> affectedBlocks.add(wrap(position)));
+                return new ClientboundExplodePacket(getPosition().getX(), getPosition().getY(), getPosition().getZ(),
+                        getRadius(), affectedBlocks, new Vec3(getKnockback().getX(), getKnockback().getY(), getKnockback().getZ()));
+            }
+        };
+    }
+
+    @Override
+    public PlaceGhostRecipePacket placeGhostRecipePacket(int containerId, NamespacedKey recipe) {
+        return new PlaceGhostRecipePacket(containerId, recipe) {
+            @Override
+            public ClientboundPlaceGhostRecipePacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeByte(getContainerId());
+                buffer.writeResourceLocation(wrap(getRecipe()));
+                return new ClientboundPlaceGhostRecipePacket(buffer);
+            }
+        };
+    }
+
+    @Override
+    public BlockUpdatePacket blockUpdatePacket(BlockPosition position, int blockState) {
+        return new BlockUpdatePacket(position, blockState) {
+            @Override
+            public ClientboundBlockUpdatePacket build() {
+                return new ClientboundBlockUpdatePacket(wrap(getPosition()), Block.stateById(getBlockState()));
+            }
+        };
+    }
+
+    @Override
+    public CustomChatCompletionsPacket customChatCompletionsPacket(CustomChatCompletionsPacket.Action action, List<String> entries) {
+        return new CustomChatCompletionsPacket(action, entries) {
+            @Override
+            public ClientboundCustomChatCompletionsPacket build() {
+                return new ClientboundCustomChatCompletionsPacket(switch (getAction()) {
+                    case ADD -> ClientboundCustomChatCompletionsPacket.Action.ADD;
+                    case REMOVE -> ClientboundCustomChatCompletionsPacket.Action.REMOVE;
+                    case SET -> ClientboundCustomChatCompletionsPacket.Action.SET;
+                }, getEntries());
+            }
+        };
+    }
+
+    @Override
+    public EntityEventPacket entityEventPacket(int entityId, byte eventId) {
+        return new EntityEventPacket(entityId, eventId) {
+            @Override
+            public ClientboundEntityEventPacket build() {
+                FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+                buffer.writeInt(getEntityId());
+                buffer.writeByte(getEventId());
+                return new ClientboundEntityEventPacket(buffer);
+            }
+        };
+    }
+
+    @Override
+    public MoveEntityPacket.PositionRotation moveEntityPacket(int entityId, double x, double y, double z, float yaw, float pitch, boolean onGround) {
+        return new MoveEntityPacket.PositionRotation(entityId, x, y, z, yaw, pitch, onGround) {
+            @Override
+            public ClientboundMoveEntityPacket.PosRot build() {
+                return new ClientboundMoveEntityPacket.PosRot(getEntityId(), (short) getX(), (short) getY(), (short) getZ(), (byte) getYaw(), (byte) getPitch(), isOnGround());
+            }
+        };
+    }
+
+    @Override
+    public MoveEntityPacket.Rotation moveEntityPacket(int entityId, float yaw, float pitch, boolean onGround) {
+        return new MoveEntityPacket.Rotation(entityId, yaw, pitch, onGround) {
+            @Override
+            public ClientboundMoveEntityPacket.Rot build() {
+                return new ClientboundMoveEntityPacket.Rot(getEntityId(), (byte) getYaw(), (byte) getPitch(), isOnGround());
+            }
+        };
+    }
+
+    @Override
+    public MoveEntityPacket.Position moveEntityPacket(int entityId, double x, double y, double z, boolean onGround) {
+        return new MoveEntityPacket.Position(entityId, x, y, z, onGround) {
+            @Override
+            public ClientboundMoveEntityPacket.Pos build() {
+                return new ClientboundMoveEntityPacket.Pos(getEntityId(), (short) getX(), (short) getY(), (short) getZ(), isOnGround());
+            }
+        };
+    }
+
+    private final HashMap<Class<? extends Packet<ClientGamePacketListener>>, Class<? extends PacketBuilder>> PACKET_MAP = new HashMap<>() {{
+        put(ClientboundAddEntityPacket.class, AddEntityPacket.class);
+        put(ClientboundAddExperienceOrbPacket.class, AddExperienceOrbPacket.class);
+        put(ClientboundAddPlayerPacket.class, AddPlayerPacket.class);
+        put(ClientboundAnimatePacket.class, AnimatePacket.class);
+        put(ClientboundAwardStatsPacket.class, AwardStatsPacket.class);
+        put(ClientboundBlockChangedAckPacket.class, BlockChangedAckPacket.class);
+        put(ClientboundBlockDestructionPacket.class, BlockDestructionPacket.class);
+        put(ClientboundBlockEntityDataPacket.class, BlockEntityDataPacket.class);
+        put(ClientboundBlockEventPacket.class, BlockEventPacket.class);
+        put(ClientboundBlockUpdatePacket.class, BlockUpdatePacket.class);
+        put(ClientboundBossEventPacket.class, BossEventPacket.class);
+        put(ClientboundChangeDifficultyPacket.class, ChangeDifficultyPacket.class);
+        put(ClientboundChatPreviewPacket.class, ChatPreviewPacket.class);
+        put(ClientboundClearTitlesPacket.class, TitlePacket.ClearTitles.class);
+        put(ClientboundCommandsPacket.class, CommandsPacket.class);
+        put(ClientboundCommandSuggestionsPacket.class, CommandSuggestionsPacket.class);
+        put(ClientboundContainerClosePacket.class, ContainerClosePacket.class);
+        put(ClientboundContainerSetContentPacket.class, ContainerSetContentPacket.class);
+        put(ClientboundContainerSetDataPacket.class, ContainerSetDataPacket.class);
+        put(ClientboundContainerSetSlotPacket.class, ContainerSetSlotPacket.class);
+        put(ClientboundCooldownPacket.class, CooldownPacket.class);
+        put(ClientboundCustomChatCompletionsPacket.class, CustomChatCompletionsPacket.class);
+        put(ClientboundCustomPayloadPacket.class, CustomPayloadPacket.class);
+        put(ClientboundCustomSoundPacket.class, CustomSoundPacket.class);
+        put(ClientboundDeleteChatPacket.class, DeleteChatPacket.class);
+        put(ClientboundDisconnectPacket.class, DisconnectPacket.class);
+        put(ClientboundEntityEventPacket.class, EntityEventPacket.class);
+        put(ClientboundExplodePacket.class, ExplodePacket.class);
+        put(ClientboundForgetLevelChunkPacket.class, ForgetLevelChunkPacket.class);
+        put(ClientboundGameEventPacket.class, GameEventPacket.class);
+        put(ClientboundHorseScreenOpenPacket.class, HorseScreenOpenPacket.class);
+        put(ClientboundInitializeBorderPacket.class, InitializeBorderPacket.class);
+        put(ClientboundKeepAlivePacket.class, KeepAlivePacket.class);
+        put(ClientboundLevelChunkWithLightPacket.class, LevelChunkWithLightPacket.class);
+        put(ClientboundLevelEventPacket.class, LevelEventPacket.class);
+        put(ClientboundLevelParticlesPacket.class, LevelParticlesPacket.class);
+        put(ClientboundLightUpdatePacket.class, LightUpdatePacket.class);
+        put(ClientboundLoginPacket.class, LoginPacket.class);
+        put(ClientboundMapItemDataPacket.class, MapItemDataPacket.class);
+        put(ClientboundMerchantOffersPacket.class, MerchantOffersPacket.class);
+        put(ClientboundMoveEntityPacket.class, MoveEntityPacket.class);
+        put(ClientboundMoveEntityPacket.Pos.class, MoveEntityPacket.Position.class);
+        put(ClientboundMoveEntityPacket.Rot.class, MoveEntityPacket.Rotation.class);
+        put(ClientboundMoveEntityPacket.PosRot.class, MoveEntityPacket.PositionRotation.class);
+        put(ClientboundMoveVehiclePacket.class, MoveVehiclePacket.class);
+        put(ClientboundOpenBookPacket.class, OpenBookPacket.class);
+        put(ClientboundOpenScreenPacket.class, OpenScreenPacket.class);
+        put(ClientboundOpenSignEditorPacket.class, OpenSignEditorPacket.class);
+        put(ClientboundPingPacket.class, PingPacket.class);
+        put(ClientboundPlaceGhostRecipePacket.class, PlaceGhostRecipePacket.class);
+        put(ClientboundPlayerAbilitiesPacket.class, PlayerAbilitiesPacket.class);
+        put(ClientboundPlayerChatHeaderPacket.class, PlayerChatHeaderPacket.class);
+        put(ClientboundPlayerChatPacket.class, PlayerChatPacket.class);
+        put(ClientboundPlayerCombatEndPacket.class, PlayerCombatEndPacket.class);
+        put(ClientboundPlayerCombatEnterPacket.class, PlayerCombatEnterPacket.class);
+        put(ClientboundPlayerCombatKillPacket.class, PlayerCombatKillPacket.class);
+        put(ClientboundPlayerInfoPacket.class, PlayerInfoPacket.class);
+        put(ClientboundPlayerLookAtPacket.class, PlayerLookAtPacket.class);
+        put(ClientboundPlayerPositionPacket.class, PlayerPositionPacket.class);
+        put(ClientboundRecipePacket.class, RecipePacket.class);
+        put(ClientboundRemoveEntitiesPacket.class, RemoveEntitiesPacket.class);
+        put(ClientboundRemoveMobEffectPacket.class, RemoveMobEffectPacket.class);
+        put(ClientboundResourcePackPacket.class, ResourcePackPacket.class);
+        put(ClientboundRespawnPacket.class, RespawnPacket.class);
+        put(ClientboundRotateHeadPacket.class, RotateHeadPacket.class);
+        put(ClientboundSectionBlocksUpdatePacket.class, SectionBlocksUpdatePacket.class);
+        put(ClientboundSelectAdvancementsTabPacket.class, SelectAdvancementsTabPacket.class);
+        put(ClientboundServerDataPacket.class, ServerDataPacket.class);
+        put(ClientboundSetActionBarTextPacket.class, SetActionBarTextPacket.class);
+        put(ClientboundSetBorderCenterPacket.class, SetBorderCenterPacket.class);
+        put(ClientboundSetBorderLerpSizePacket.class, SetBorderLerpSizePacket.class);
+        put(ClientboundSetBorderSizePacket.class, SetBorderSizePacket.class);
+        put(ClientboundSetBorderWarningDelayPacket.class, SetBorderWarningDelayPacket.class);
+        put(ClientboundSetBorderWarningDistancePacket.class, SetBorderWarningDistancePacket.class);
+        put(ClientboundSetCameraPacket.class, SetCameraPacket.class);
+        put(ClientboundSetCarriedItemPacket.class, SetCarriedItemPacket.class);
+        put(ClientboundSetChunkCacheCenterPacket.class, SetChunkCacheCenterPacket.class);
+        put(ClientboundSetChunkCacheRadiusPacket.class, SetChunkCacheRadiusPacket.class);
+        put(ClientboundSetDefaultSpawnPositionPacket.class, SetDefaultSpawnPositionPacket.class);
+        put(ClientboundSetDisplayChatPreviewPacket.class, SetDisplayChatPreviewPacket.class);
+        put(ClientboundSetDisplayObjectivePacket.class, SetDisplayObjectivePacket.class);
+        put(ClientboundSetEntityDataPacket.class, SetEntityDataPacket.class);
+        put(ClientboundSetEntityLinkPacket.class, SetEntityLinkPacket.class);
+        put(ClientboundSetEntityMotionPacket.class, SetEntityMotionPacket.class);
+        put(ClientboundSetEquipmentPacket.class, SetEquipmentPacket.class);
+        put(ClientboundSetExperiencePacket.class, SetExperiencePacket.class);
+        put(ClientboundSetHealthPacket.class, SetHealthPacket.class);
+        put(ClientboundSetObjectivePacket.class, SetObjectivePacket.class);
+        put(ClientboundSetPassengersPacket.class, SetPassengersPacket.class);
+        put(ClientboundSetPlayerTeamPacket.class, SetPlayerTeamPacket.class);
+        put(ClientboundSetScorePacket.class, SetScorePacket.class);
+        put(ClientboundSetSimulationDistancePacket.class, SetSimulationDistancePacket.class);
+        put(ClientboundSetSubtitleTextPacket.class, TitlePacket.SetSubtitleText.class);
+        put(ClientboundSetTimePacket.class, SetTimePacket.class);
+        put(ClientboundSetTitlesAnimationPacket.class, TitlePacket.SetTitlesAnimation.class);
+        put(ClientboundSetTitleTextPacket.class, TitlePacket.SetTitleText.class);
+        put(ClientboundSoundEntityPacket.class, SoundEntityPacket.class);
+        put(ClientboundSoundPacket.class, SoundPacket.class);
+        put(ClientboundStopSoundPacket.class, StopSoundPacket.class);
+        put(ClientboundSystemChatPacket.class, SystemChatPacket.class);
+        put(ClientboundTabListPacket.class, TabListPacket.class);
+        put(ClientboundTagQueryPacket.class, TagQueryPacket.class);
+        put(ClientboundTakeItemEntityPacket.class, TakeItemEntityPacket.class);
+        put(ClientboundTeleportEntityPacket.class, TeleportEntityPacket.class);
+        put(ClientboundUpdateAdvancementsPacket.class, UpdateAdvancementsPacket.class);
+        put(ClientboundUpdateAttributesPacket.class, UpdateAttributesPacket.class);
+        put(ClientboundUpdateMobEffectPacket.class, UpdateMobEffectPacket.class);
+        put(ClientboundUpdateRecipesPacket.class, UpdateRecipesPacket.class);
+        put(ClientboundUpdateTagsPacket.class, UpdateTagsPacket.class);
+    }};
+
+    @Override
+    public <P> Class<? extends PacketBuilder> map(Class<P> clazz) {
+        Class<? extends PacketBuilder> aClass = PACKET_MAP.get(clazz);
+        if (aClass != null) return aClass;
+        throw new IllegalStateException("Unmapped outgoing packet: " + clazz.getName());
+    }
+
+    @Override
     public <P> PacketBuilder map(P packet) {
         Function<P, PacketBuilder> original = p -> new PacketBuilder() {
             @Override
@@ -1015,7 +1256,7 @@ public final class OutgoingPacketManager implements Outgoing {
             border.setWarningDelay(instance.getWarningTime());
             return InitializeBorderPacket.create(border);
         } else if (packet instanceof ClientboundAnimatePacket instance) {
-            return AnimationPacket.create(instance.getId(), AnimationPacket.Animation.values()[instance.getAction()]);
+            return AnimatePacket.create(instance.getId(), AnimatePacket.Animation.values()[instance.getAction()]);
         } else if (packet instanceof ClientboundSetExperiencePacket instance) {
             return SetExperiencePacket.create(instance.getExperienceProgress(), instance.getTotalExperience(), instance.getExperienceLevel());
         } else if (packet instanceof ClientboundCommandSuggestionsPacket instance) {
@@ -1031,9 +1272,9 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundSetCameraPacket instance) {
             FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
             instance.write(buffer);
-            return CameraPacket.create(buffer.readVarInt());
+            return SetCameraPacket.create(buffer.readVarInt());
         } else if (packet instanceof ClientboundGameEventPacket instance) {
-            return GameStateChangePacket.create(wrap(instance.getEvent()), instance.getParam());
+            return GameEventPacket.create(wrap(instance.getEvent()), instance.getParam());
         } else if (packet instanceof ClientboundStopSoundPacket instance) {
             return StopSoundPacket.create(nullable(instance.getName()), nullable(instance.getSource()));
         } else if (packet instanceof ClientboundOpenBookPacket instance) {
@@ -1045,7 +1286,7 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundSetDisplayObjectivePacket instance) {
             return SetDisplayObjectivePacket.create(instance.getSlot(), instance.getObjectiveName());
         } else if (packet instanceof ClientboundSetTimePacket instance) {
-            return UpdateTimePacket.create(instance.getGameTime(), instance.getDayTime(), instance.getDayTime() < 0);
+            return SetTimePacket.create(instance.getGameTime(), instance.getDayTime(), instance.getDayTime() < 0);
         } else if (packet instanceof ClientboundContainerSetContentPacket instance) {
             return ContainerSetContentPacket.create(instance.getContainerId(), instance.getStateId(), wrap(instance.getItems(), 0), wrap(instance.getCarriedItem()));
         } else if (packet instanceof ClientboundSetPlayerTeamPacket instance) {
@@ -1081,7 +1322,7 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundSetChunkCacheCenterPacket instance) {
             return SetChunkCacheCenterPacket.create(instance.getX(), instance.getZ());
         } else if (packet instanceof ClientboundCustomPayloadPacket instance) {
-            return CustomPayloadPacket.create(wrap(instance.getIdentifier()), instance.getData().array());
+            return CustomPayloadPacket.create(wrap(instance.getIdentifier()), wrap(instance.getData()));
         } else if (packet instanceof ClientboundSectionBlocksUpdatePacket instance) {
             FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
             instance.write(buffer);
@@ -1112,6 +1353,8 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundSetBorderCenterPacket instance) {
             return SetBorderCenterPacket.create(new VirtualBorder.Center(instance.getNewCenterX(), instance.getNewCenterZ()));
         } else if (packet instanceof ClientboundAddExperienceOrbPacket instance) {
+            Position position = new Position(instance.getX(), instance.getY(), instance.getZ());
+            return AddExperienceOrbPacket.create(instance.getId(), position, instance.getValue());
         } else if (packet instanceof ClientboundMerchantOffersPacket instance) {
             List<MerchantOffersPacket.Offer> offers = new ArrayList<>();
             instance.getOffers().forEach(offer -> offers.add(wrap(offer)));
@@ -1126,6 +1369,11 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundBlockEntityDataPacket instance) {
         } else if (packet instanceof ClientboundUpdateAttributesPacket instance) {
         } else if (packet instanceof ClientboundExplodePacket instance) {
+            Position position = new Position(instance.getX(), instance.getY(), instance.getZ());
+            List<BlockPosition> affectedBlock = new ArrayList<>();
+            instance.getToBlow().forEach(pos -> affectedBlock.add(wrap(pos)));
+            Vector knockback = new Vector(instance.getKnockbackX(), instance.getKnockbackY(), instance.getKnockbackZ());
+            return ExplodePacket.create(position, instance.getPower(), affectedBlock, knockback);
         } else if (packet instanceof ClientboundPlayerCombatEnterPacket instance) {
             return PlayerCombatEnterPacket.create();
         } else if (packet instanceof ClientboundBlockEventPacket instance) {
@@ -1145,7 +1393,9 @@ public final class OutgoingPacketManager implements Outgoing {
             return ContainerSetSlotPacket.create(instance.getContainerId(), instance.getSlot(), wrap(instance.getItem()));
         } else if (packet instanceof ClientboundRecipePacket instance) {
         } else if (packet instanceof ClientboundPlaceGhostRecipePacket instance) {
+            return PlaceGhostRecipePacket.create(instance.getContainerId(), wrap(instance.getRecipe()));
         } else if (packet instanceof ClientboundBlockUpdatePacket instance) {
+            return BlockUpdatePacket.create(wrap(instance.getPos()), Block.BLOCK_STATE_REGISTRY.getId(instance.getBlockState()));
         } else if (packet instanceof ClientboundSetDefaultSpawnPositionPacket instance) {
             return SetDefaultSpawnPositionPacket.create(wrap(instance.getPos()), instance.getAngle());
         } else if (packet instanceof ClientboundOpenScreenPacket instance) {
@@ -1155,8 +1405,25 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundSetTitlesAnimationPacket instance) {
             return TitlePacket.SetTitlesAnimation.create(instance.getFadeIn(), instance.getStay(), instance.getFadeOut());
         } else if (packet instanceof ClientboundMoveEntityPacket instance) {
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            instance.write(buffer);
+            int entityId = buffer.readVarInt();
+            if (instance.hasPosition() && instance.hasRotation()) {
+                return MoveEntityPacket.PositionRotation.create(entityId, instance.getXa(), instance.getYa(), instance.getZa(), instance.getyRot(), instance.getxRot(), instance.isOnGround());
+            } else if (instance.hasRotation()) {
+                return MoveEntityPacket.Rotation.create(entityId, instance.getyRot(), instance.getxRot(), instance.isOnGround());
+            } else if (instance.hasPosition()) {
+                return MoveEntityPacket.Position.create(entityId, instance.getXa(), instance.getYa(), instance.getZa(), instance.isOnGround());
+            }
         } else if (packet instanceof ClientboundAddPlayerPacket instance) {
+            Position position = new Position(instance.getX(), instance.getY(), instance.getZ(), instance.getyRot(), instance.getxRot());
+            return AddPlayerPacket.create(instance.getEntityId(), instance.getPlayerId(), position);
         } else if (packet instanceof ClientboundCustomChatCompletionsPacket instance) {
+            return CustomChatCompletionsPacket.create(switch (instance.action()) {
+                case REMOVE -> CustomChatCompletionsPacket.Action.REMOVE;
+                case ADD -> CustomChatCompletionsPacket.Action.ADD;
+                case SET -> CustomChatCompletionsPacket.Action.SET;
+            }, instance.entries());
         } else if (packet instanceof ClientboundAwardStatsPacket instance) {
         } else if (packet instanceof ClientboundPlayerPositionPacket instance) {
         } else if (packet instanceof ClientboundPlayerInfoPacket instance) {
@@ -1167,6 +1434,9 @@ public final class OutgoingPacketManager implements Outgoing {
             return PlayerCombatEndPacket.create(buffer.readVarInt(), buffer.readInt());
         } else if (packet instanceof ClientboundCustomSoundPacket instance) {
         } else if (packet instanceof ClientboundEntityEventPacket instance) {
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            instance.write(buffer);
+            return EntityEventPacket.create(buffer.readInt(), buffer.readByte());
         } else if (packet instanceof ClientboundDeleteChatPacket instance) {
         } else if (packet instanceof ClientboundContainerSetDataPacket instance) {
             return ContainerSetDataPacket.create(instance.getContainerId(), instance.getId(), instance.getValue());
