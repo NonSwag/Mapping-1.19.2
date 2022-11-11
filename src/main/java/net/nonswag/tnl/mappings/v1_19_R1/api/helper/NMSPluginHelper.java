@@ -1,4 +1,4 @@
-package net.nonswag.tnl.mappings.v1_19_R1.api.plugin;
+package net.nonswag.tnl.mappings.v1_19_R1.api.helper;
 
 import net.nonswag.core.api.annotation.MethodsReturnNonnullByDefault;
 import net.nonswag.tnl.listener.api.plugin.PluginHelper;

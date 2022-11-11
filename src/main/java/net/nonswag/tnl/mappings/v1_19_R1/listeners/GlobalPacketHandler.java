@@ -44,7 +44,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 
-import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.wrap;
+import static net.nonswag.tnl.mappings.v1_19_R1.api.helper.NMSHelper.wrap;
 
 @ParametersAreNonnullByDefault
 public class GlobalPacketHandler {
@@ -150,16 +150,13 @@ public class GlobalPacketHandler {
         manager.registerPacketReader(ContainerClickPacket.class, (player, packet, cancelled) -> {
             GUI gui = player.interfaceManager().getGUI();
             if (gui == null) return;
-            if (packet.getSlot() < gui.getSize() && packet.getSlot() >= 0) {
+            if (packet.getContainerId() == 1) {
                 Interaction.Type type = wrap(packet.getButtonId(), packet.getClickType());
                 gui.getClickListener().onClick(player, packet.getSlot(), type);
                 GUIItem item = gui.getItem(packet.getSlot());
-                if (item != null) for (Interaction interaction : item.getInteractions(type)) {
-                    interaction.getAction().accept(player);
+                if (item != null) for (Interaction interaction : item.interactions(type)) {
+                    interaction.action().accept(player);
                 }
-            } else if (packet.getSlot() >= gui.getSize()) {
-                packet.setSlot(packet.getSlot() - gui.getSize() + 9);
-                packet.setContainerId(0);
             }
             cancelled.set(true);
             ContainerSetSlotPacket.create(-1, -1, null).send(player);

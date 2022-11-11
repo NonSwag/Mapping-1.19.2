@@ -16,20 +16,16 @@ import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
 
-import javax.annotation.Nonnull;
-
-import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.wrap;
+import static net.nonswag.tnl.mappings.v1_19_R1.api.helper.NMSHelper.wrap;
 
 public class NMSEntityPlayer implements TNLEntityPlayer {
 
     @Getter
-    @Nonnull
     private final GameProfile gameProfile;
-    @Nonnull
     private final ServerPlayer player;
     private boolean cape = false;
 
-    public NMSEntityPlayer(@Nonnull World world, double x, double y, double z, float yaw, float pitch, @Nonnull GameProfile profile) {
+    public NMSEntityPlayer(World world, double x, double y, double z, float yaw, float pitch, GameProfile profile) {
         this.player = new ServerPlayer(((CraftServer) Bukkit.getServer()).getServer(), ((CraftWorld) world).getHandle(),
                 new com.mojang.authlib.GameProfile(profile.getUniqueId(), profile.getName()), null);
         player.moveTo(x, y, z, yaw, pitch);
@@ -42,7 +38,7 @@ public class NMSEntityPlayer implements TNLEntityPlayer {
     }
 
     @Override
-    public void setItem(@Nonnull SlotType slot, @Nonnull TNLItem item) {
+    public void setItem(SlotType slot, TNLItem item) {
         player.setItemSlot(wrap(slot), CraftItemStack.asNMSCopy(item.getItemStack()), true);
     }
 
@@ -62,7 +58,7 @@ public class NMSEntityPlayer implements TNLEntityPlayer {
     }
 
     @Override
-    public void setPlayerPose(@Nonnull Pose pose) {
+    public void setPlayerPose(Pose pose) {
         player.setPose(switch (pose) {
             case SNEAKING -> net.minecraft.world.entity.Pose.CROUCHING;
             case DYING -> net.minecraft.world.entity.Pose.DYING;
@@ -81,7 +77,6 @@ public class NMSEntityPlayer implements TNLEntityPlayer {
         });
     }
 
-    @Nonnull
     @Override
     public Pose getPlayerPose() {
         return switch (player.getPose()) {
@@ -114,7 +109,7 @@ public class NMSEntityPlayer implements TNLEntityPlayer {
     }
 
     @Override
-    public void setLocation(@Nonnull Location location) {
+    public void setLocation(Location location) {
         player.moveTo(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
     }
 
@@ -133,7 +128,6 @@ public class NMSEntityPlayer implements TNLEntityPlayer {
         return player.getId();
     }
 
-    @Nonnull
     @Override
     public CraftPlayer bukkit() {
         return player.getBukkitEntity();

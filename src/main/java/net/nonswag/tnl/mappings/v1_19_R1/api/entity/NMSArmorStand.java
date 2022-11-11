@@ -15,17 +15,15 @@ import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.wrap;
+import static net.nonswag.tnl.mappings.v1_19_R1.api.helper.NMSHelper.wrap;
 
 public class NMSArmorStand implements TNLArmorStand {
 
-    @Nonnull
     private final ArmorStand armorStand;
 
-    public NMSArmorStand(@Nonnull World world, double x, double y, double z, float yaw, float pitch) {
+    public NMSArmorStand(World world, double x, double y, double z, float yaw, float pitch) {
         this.armorStand = new ArmorStand(((CraftWorld) world).getHandle(), x, y, z);
         this.armorStand.setRot(yaw, pitch);
     }
@@ -210,7 +208,7 @@ public class NMSArmorStand implements TNLArmorStand {
     }
 
     @Override
-    public void setLocation(@Nonnull Location location) {
+    public void setLocation(Location location) {
         setLocation(location.getX(), location.getY(), location.getZ());
     }
 
@@ -225,7 +223,7 @@ public class NMSArmorStand implements TNLArmorStand {
     }
 
     @Override
-    public void setItem(@Nonnull SlotType slot, @Nonnull TNLItem item) {
+    public void setItem(SlotType slot, TNLItem item) {
         armorStand.setItemSlot(wrap(slot), CraftItemStack.asNMSCopy(item.getItemStack()), true);
     }
 
@@ -234,7 +232,6 @@ public class NMSArmorStand implements TNLArmorStand {
         return armorStand.getId();
     }
 
-    @Nonnull
     @Override
     public CraftLivingEntity bukkit() {
         return (CraftLivingEntity) armorStand.getBukkitEntity();

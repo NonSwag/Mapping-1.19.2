@@ -30,8 +30,8 @@ public abstract class PlayerChannelHandler extends ChannelDuplexHandler {
                 if (!cancelled.get()) super.channelRead(context, incoming.build());
             } else super.channelRead(context, packet);
         } catch (Exception e) {
-            super.channelRead(context, packet);
             e.printStackTrace();
+            super.channelRead(context, packet);
         }
     }
 
@@ -46,8 +46,8 @@ public abstract class PlayerChannelHandler extends ChannelDuplexHandler {
                 if (!cancelled.get()) super.write(context, outgoing.build(), channel);
             } else super.write(context, packet, channel);
         } catch (Exception e) {
-            super.write(context, packet, channel);
             e.printStackTrace();
+            super.write(context, packet, channel);
         }
     }
 

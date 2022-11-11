@@ -51,8 +51,8 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.*;
 import java.util.function.Function;
 
-import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.nullable;
-import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.wrap;
+import static net.nonswag.tnl.mappings.v1_19_R1.api.helper.NMSHelper.nullable;
+import static net.nonswag.tnl.mappings.v1_19_R1.api.helper.NMSHelper.wrap;
 
 @FieldsAreNonnullByDefault
 @ParametersAreNonnullByDefault
@@ -1300,6 +1300,12 @@ public final class OutgoingPacketManager implements Outgoing {
             if (option.needsEntries()) entries = buffer.readCollection(ArrayList::new, FriendlyByteBuf::readUtf);
             return SetPlayerTeamPacket.create(name, option, parameters, entries);
         } else if (packet instanceof ClientboundUpdateTagsPacket instance) {
+            return new UpdateTagsPacket() {
+                @Override
+                public ClientboundUpdateTagsPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundSetSimulationDistancePacket instance) {
             return SetSimulationDistancePacket.create(instance.simulationDistance());
         } else if (packet instanceof ClientboundChatPreviewPacket instance) {
@@ -1315,6 +1321,12 @@ public final class OutgoingPacketManager implements Outgoing {
             instance.write(buffer);
             return RotateHeadPacket.create(buffer.readVarInt(), buffer.readByte());
         } else if (packet instanceof ClientboundLoginPacket instance) {
+            return new LoginPacket() {
+                @Override
+                public ClientboundLoginPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundLightUpdatePacketData instance) {
             return original.apply(packet);
         } else if (packet instanceof ClientboundTakeItemEntityPacket instance) {
@@ -1339,13 +1351,37 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundBlockDestructionPacket instance) {
             return BlockDestructionPacket.create(instance.getId(), wrap(instance.getPos()), instance.getProgress());
         } else if (packet instanceof ClientboundUpdateRecipesPacket instance) {
+            return new UpdateRecipesPacket() {
+                @Override
+                public ClientboundUpdateRecipesPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundDisconnectPacket instance) {
             return DisconnectPacket.create(wrap(instance.getReason()));
         } else if (packet instanceof ClientboundSoundEntityPacket instance) {
+            return new SoundEntityPacket() {
+                @Override
+                public ClientboundSoundEntityPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundPingPacket instance) {
             return PingPacket.create(instance.getId());
         } else if (packet instanceof ClientboundPlayerChatHeaderPacket instance) {
+            return new PlayerChatHeaderPacket() {
+                @Override
+                public ClientboundPlayerChatHeaderPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundSetEntityDataPacket instance) {
+            return new SetEntityDataPacket() {
+                @Override
+                public ClientboundSetEntityDataPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundOpenSignEditorPacket instance) {
             return OpenSignEditorPacket.create(wrap(instance.getPos()));
         } else if (packet instanceof ClientboundBlockChangedAckPacket instance) {
@@ -1367,7 +1403,19 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundSetSubtitleTextPacket instance) {
             return TitlePacket.SetSubtitleText.create(wrap(instance.getText()));
         } else if (packet instanceof ClientboundBlockEntityDataPacket instance) {
+            return new BlockEntityDataPacket() {
+                @Override
+                public ClientboundBlockEntityDataPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundUpdateAttributesPacket instance) {
+            return new UpdateAttributesPacket() {
+                @Override
+                public ClientboundUpdateAttributesPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundExplodePacket instance) {
             Position position = new Position(instance.getX(), instance.getY(), instance.getZ());
             List<BlockPosition> affectedBlock = new ArrayList<>();
@@ -1383,15 +1431,39 @@ public final class OutgoingPacketManager implements Outgoing {
             instance.write(buffer);
             SetEntityLinkPacket.create(buffer.readInt(), buffer.readInt());
         } else if (packet instanceof ClientboundCommandsPacket instance) {
+            return new CommandsPacket() {
+                @Override
+                public ClientboundCommandsPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundLevelParticlesPacket instance) {
+            return new LevelParticlesPacket() {
+                @Override
+                public ClientboundLevelParticlesPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundPlayerCombatKillPacket instance) {
             return PlayerCombatKillPacket.create(instance.getPlayerId(), instance.getKillerId(), wrap(instance.getMessage()));
         } else if (packet instanceof ClientboundSetTitleTextPacket instance) {
             return TitlePacket.SetTitleText.create(wrap(instance.getText()));
         } else if (packet instanceof ClientboundSoundPacket instance) {
+            return new SoundPacket() {
+                @Override
+                public ClientboundSoundPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundContainerSetSlotPacket instance) {
             return ContainerSetSlotPacket.create(instance.getContainerId(), instance.getSlot(), wrap(instance.getItem()));
         } else if (packet instanceof ClientboundRecipePacket instance) {
+            return new RecipePacket() {
+                @Override
+                public ClientboundRecipePacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundPlaceGhostRecipePacket instance) {
             return PlaceGhostRecipePacket.create(instance.getContainerId(), wrap(instance.getRecipe()));
         } else if (packet instanceof ClientboundBlockUpdatePacket instance) {
@@ -1402,6 +1474,9 @@ public final class OutgoingPacketManager implements Outgoing {
             assert instance.getType() != null : "The screen type cannot be null";
             return OpenScreenPacket.create(instance.getContainerId(), wrap(instance.getType()), wrap(instance.getTitle()));
         } else if (packet instanceof ClientboundSetEquipmentPacket instance) {
+            HashMap<SlotType, TNLItem> items = new HashMap<>();
+            instance.getSlots().forEach(pair -> items.put(wrap(pair.getFirst()), wrap(pair.getSecond())));
+            return SetEquipmentPacket.create(instance.getEntity(), items);
         } else if (packet instanceof ClientboundSetTitlesAnimationPacket instance) {
             return TitlePacket.SetTitlesAnimation.create(instance.getFadeIn(), instance.getStay(), instance.getFadeOut());
         } else if (packet instanceof ClientboundMoveEntityPacket instance) {
@@ -1425,19 +1500,49 @@ public final class OutgoingPacketManager implements Outgoing {
                 case SET -> CustomChatCompletionsPacket.Action.SET;
             }, instance.entries());
         } else if (packet instanceof ClientboundAwardStatsPacket instance) {
+            return new AwardStatsPacket() {
+                @Override
+                public ClientboundAwardStatsPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundPlayerPositionPacket instance) {
+            return new PlayerPositionPacket() {
+                @Override
+                public ClientboundPlayerPositionPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundPlayerInfoPacket instance) {
         } else if (packet instanceof ClientboundSetObjectivePacket instance) {
+            return new SetObjectivePacket() {
+                @Override
+                public ClientboundSetObjectivePacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundPlayerCombatEndPacket instance) {
             FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
             instance.write(buffer);
             return PlayerCombatEndPacket.create(buffer.readVarInt(), buffer.readInt());
         } else if (packet instanceof ClientboundCustomSoundPacket instance) {
+            return new CustomSoundPacket() {
+                @Override
+                public ClientboundCustomSoundPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundEntityEventPacket instance) {
             FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
             instance.write(buffer);
             return EntityEventPacket.create(buffer.readInt(), buffer.readByte());
         } else if (packet instanceof ClientboundDeleteChatPacket instance) {
+            return new DeleteChatPacket() {
+                @Override
+                public ClientboundDeleteChatPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundContainerSetDataPacket instance) {
             return ContainerSetDataPacket.create(instance.getContainerId(), instance.getId(), instance.getValue());
         } else if (packet instanceof ClientboundSetEntityMotionPacket instance) {
@@ -1446,6 +1551,12 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundSetBorderSizePacket instance) {
             return SetBorderSizePacket.create(instance.getSize());
         } else if (packet instanceof ClientboundPlayerChatPacket instance) {
+            return new PlayerChatPacket() {
+                @Override
+                public ClientboundPlayerChatPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundSetBorderWarningDelayPacket instance) {
             return SetBorderWarningDelayPacket.create(instance.getWarningDelay());
         } else if (packet instanceof ClientboundTabListPacket instance) {
@@ -1463,9 +1574,21 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundSetActionBarTextPacket instance) {
             return SetActionBarTextPacket.create(nullable(instance.getText()));
         } else if (packet instanceof ClientboundMapItemDataPacket instance) {
+            return new MapItemDataPacket() {
+                @Override
+                public ClientboundMapItemDataPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundForgetLevelChunkPacket instance) {
             return ForgetLevelChunkPacket.create(instance.getX(), instance.getZ());
         } else if (packet instanceof ClientboundPlayerAbilitiesPacket instance) {
+            return new PlayerAbilitiesPacket() {
+                @Override
+                public ClientboundPlayerAbilitiesPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundResourcePackPacket instance) {
             return ResourcePackPacket.create(instance.getUrl(), instance.getHash(), nullable(instance.getPrompt()), instance.isRequired());
         } else if (packet instanceof ClientboundCooldownPacket instance) {
@@ -1476,6 +1599,12 @@ public final class OutgoingPacketManager implements Outgoing {
             Position position = new Position(instance.getX(), instance.getY(), instance.getZ(), instance.getyRot(), instance.getxRot());
             return TeleportEntityPacket.create(instance.getId(), position, instance.isOnGround());
         } else if (packet instanceof ClientboundRespawnPacket instance) {
+            return new RespawnPacket() {
+                @Override
+                public ClientboundRespawnPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundBossEventPacket instance) {
             // write to buffer and read values UUID, Enum OperationType,
         } else if (packet instanceof ClientboundSystemChatPacket instance) {
@@ -1491,18 +1620,35 @@ public final class OutgoingPacketManager implements Outgoing {
         } else if (packet instanceof ClientboundLevelEventPacket instance) {
             return LevelEventPacket.create(instance.getType(), wrap(instance.getPos()), instance.getData(), instance.isGlobalEvent());
         } else if (packet instanceof ClientboundUpdateMobEffectPacket instance) {
+            return new UpdateMobEffectPacket() {
+                @Override
+                public ClientboundUpdateMobEffectPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundSetBorderLerpSizePacket instance) {
             return SetBorderLerpSizePacket.create(instance.getOldSize(), instance.getNewSize(), instance.getLerpTime());
         } else if (packet instanceof ClientboundUpdateAdvancementsPacket instance) {
-            if (true) return original.apply(packet);
             HashMap<NamespacedKey, Advancement.Builder> added = new HashMap<>();
             List<NamespacedKey> removed = new ArrayList<>();
             HashMap<NamespacedKey, Advancement.Progress> progress = new HashMap<>();
             instance.getAdded().forEach((resource, builder) -> added.put(wrap(resource), wrap(builder, resource)));
             instance.getRemoved().forEach(resource -> removed.add(wrap(resource)));
             instance.getProgress().forEach((resource, advancementProgress) -> progress.put(wrap(resource), wrap(advancementProgress)));
-            return UpdateAdvancementsPacket.create(instance.shouldReset(), added, removed, progress);
+            return new UpdateAdvancementsPacket(instance.shouldReset(), added, removed, progress) {
+                @Override
+                public ClientboundUpdateAdvancementsPacket build() {
+                    return instance;
+                }
+            };
+            // return UpdateAdvancementsPacket.create(instance.shouldReset(), added, removed, progress);
         } else if (packet instanceof ClientboundRemoveMobEffectPacket instance) {
+            return new RemoveMobEffectPacket() {
+                @Override
+                public ClientboundRemoveMobEffectPacket build() {
+                    return instance;
+                }
+            };
         } else if (packet instanceof ClientboundSetHealthPacket instance) {
             return SetHealthPacket.create(instance.getHealth(), instance.getFood(), instance.getSaturation());
         } else if (packet instanceof ClientboundServerDataPacket instance) {

@@ -34,8 +34,8 @@ import java.time.Instant;
 import java.util.*;
 import java.util.function.Function;
 
-import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.nullable;
-import static net.nonswag.tnl.mappings.v1_19_R1.api.wrapper.NMSHelper.wrap;
+import static net.nonswag.tnl.mappings.v1_19_R1.api.helper.NMSHelper.nullable;
+import static net.nonswag.tnl.mappings.v1_19_R1.api.helper.NMSHelper.wrap;
 
 @FieldsAreNonnullByDefault
 @ParametersAreNonnullByDefault
@@ -627,11 +627,13 @@ public class IncomingPacketManager implements Incoming {
     }
 
     @Override
-    public UseItemOnPacket useItemOnPacket(Hand hand, UseItemOnPacket.BlockTargetResult target, int sequence) {
-        return new UseItemOnPacket(hand, target, sequence) {
+    public UseItemOnPacket useItemOnPacket(Hand hand, UseItemOnPacket.BlockTargetResult target, int sequence, long timestamp) {
+        return new UseItemOnPacket(hand, target, sequence, timestamp) {
             @Override
             public ServerboundUseItemOnPacket build() {
-                return new ServerboundUseItemOnPacket(wrap(getHand()), wrap(getTarget()), getSequence());
+                ServerboundUseItemOnPacket packet = new ServerboundUseItemOnPacket(wrap(getHand()), wrap(getTarget()), getSequence());
+                packet.timestamp = getTimestamp();
+                return packet;
             }
         };
     }
@@ -958,7 +960,7 @@ public class IncomingPacketManager implements Incoming {
         } else if (packet instanceof ServerboundPickItemPacket instance) {
             return PickItemPacket.create(instance.getSlot());
         } else if (packet instanceof ServerboundUseItemOnPacket instance) {
-            return UseItemOnPacket.create(wrap(instance.getHand()), wrap(instance.getHitResult()), instance.getSequence());
+            return UseItemOnPacket.create(wrap(instance.getHand()), wrap(instance.getHitResult()), instance.getSequence(), instance.timestamp);
         }
         if (!unmapped.contains(packet.getClass().getName())) {
             unmapped.add(packet.getClass().getName());

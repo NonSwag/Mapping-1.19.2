@@ -13,11 +13,9 @@ import org.bukkit.craftbukkit.v1_19_R1.block.data.CraftBlockData;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
 import org.bukkit.entity.Entity;
 
-import javax.annotation.Nonnull;
-
 public class NMSFallingBlock extends FallingBlockEntity implements TNLFallingBlock {
 
-    public NMSFallingBlock(@Nonnull Location location, @Nonnull Material type) {
+    public NMSFallingBlock(Location location, Material type) {
         super(((CraftWorld) location.getWorld()).getHandle(), location.getX(), location.getY(), location.getZ(), ((CraftBlockData) type.createBlockData()).getState());
         this.blocksBuilding = false;
         this.setDeltaMovement(Vec3.ZERO);
@@ -25,7 +23,7 @@ public class NMSFallingBlock extends FallingBlockEntity implements TNLFallingBlo
     }
 
     @Override
-    public void setType(@Nonnull Material type) {
+    public void setType(Material type) {
         Reflection.Field.set(this, "blockState", ((CraftBlockData) type.createBlockData()).getState());
     }
 
@@ -35,23 +33,23 @@ public class NMSFallingBlock extends FallingBlockEntity implements TNLFallingBlo
     }
 
     @Override
-    public boolean teleport(@Nonnull Location location) {
+    public boolean teleport(Location location) {
         moveTo(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
         return true;
     }
 
     @Override
-    public boolean teleport(@Nonnull Entity entity) {
+    public boolean teleport(Entity entity) {
         return teleport(entity.getLocation());
     }
 
     @Override
-    public boolean teleport(@Nonnull TNLEntity entity) {
+    public boolean teleport(TNLEntity entity) {
         return teleport(entity.bukkit());
     }
 
     @Override
-    public void setCustomName(@Nonnull String customName) {
+    public void setCustomName(String customName) {
         setCustomName(Component.literal(customName));
         setCustomNameVisible(true);
     }
@@ -61,7 +59,6 @@ public class NMSFallingBlock extends FallingBlockEntity implements TNLFallingBlo
         return super.getId();
     }
 
-    @Nonnull
     @Override
     public CraftEntity bukkit() {
         return super.getBukkitEntity();

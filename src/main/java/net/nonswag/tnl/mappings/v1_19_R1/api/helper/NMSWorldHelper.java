@@ -1,4 +1,4 @@
-package net.nonswag.tnl.mappings.v1_19_R1.api.world;
+package net.nonswag.tnl.mappings.v1_19_R1.api.helper;
 
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;

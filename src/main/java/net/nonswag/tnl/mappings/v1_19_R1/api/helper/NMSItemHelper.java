@@ -1,4 +1,4 @@
-package net.nonswag.tnl.mappings.v1_19_R1.api.item;
+package net.nonswag.tnl.mappings.v1_19_R1.api.helper;
 
 import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;

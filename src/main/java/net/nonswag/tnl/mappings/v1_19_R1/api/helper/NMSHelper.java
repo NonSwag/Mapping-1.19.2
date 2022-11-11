@@ -1,4 +1,4 @@
-package net.nonswag.tnl.mappings.v1_19_R1.api.wrapper;
+package net.nonswag.tnl.mappings.v1_19_R1.api.helper;
 
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.Message;
@@ -71,6 +71,17 @@ import java.util.*;
 @ParametersAreNonnullByDefault
 @MethodsReturnNonnullByDefault
 public final class NMSHelper {
+
+    public static SlotType wrap(EquipmentSlot slot) {
+        return switch (slot) {
+            case MAINHAND -> SlotType.MAIN_HAND;
+            case OFFHAND -> SlotType.OFF_HAND;
+            case FEET -> SlotType.BOOTS;
+            case LEGS -> SlotType.LEGGINGS;
+            case CHEST -> SlotType.CHESTPLATE;
+            case HEAD -> SlotType.HELMET;
+        };
+    }
 
     public static MerchantOffersPacket.Offer wrap(MerchantOffer offer) {
         MerchantOffersPacket.Offer.Builder builder = MerchantOffersPacket.Offer.builder();
