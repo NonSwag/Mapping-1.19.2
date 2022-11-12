@@ -17,6 +17,7 @@ import org.bukkit.potion.PotionEffect;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
+import java.util.Objects;
 
 public class NMSItem extends TNLItem {
 
@@ -72,5 +73,15 @@ public class NMSItem extends TNLItem {
         item.setTag(nbt.versioned());
         setItemMeta(CraftItemStack.getItemMeta(item));
         return this;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (object == this) return true;
+        if (!(object instanceof ItemStack item)) return false;
+        if (!item.getType().equals(getType())) return false;
+        if (!item.displayName().equals(displayName())) return false;
+        if (!Objects.equals(item.lore(), lore())) return false;
+        return Objects.equals(item.getItemMeta(), getItemMeta());
     }
 }

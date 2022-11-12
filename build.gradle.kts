@@ -40,7 +40,3 @@ tasks {
         filteringCharset = Charsets.UTF_8.name()
     }
 }
-
-tasks.getByName<Test>("test") {
-    useJUnitPlatform()
-}
