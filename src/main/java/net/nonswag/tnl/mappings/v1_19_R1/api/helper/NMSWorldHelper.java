@@ -42,7 +42,7 @@ public class NMSWorldHelper extends WorldHelper {
     public List<TNLPlayer> getPlayers(@Nonnull World world) {
         List<TNLPlayer> players = new ArrayList<>();
         ServerLevel handle = ((CraftWorld) world).getHandle();
-        handle.players.forEach(serverPlayer -> players.add(TNLPlayer.cast(serverPlayer.getBukkitEntity())));
+        handle.players().forEach(serverPlayer -> players.add(TNLPlayer.cast(serverPlayer.getBukkitEntity())));
         handle.pendingLogin.forEach(serverPlayer -> {
             TNLPlayer player = TNLPlayer.cast(serverPlayer.getBukkitEntity());
             if (!players.contains(player)) players.add(player);
@@ -52,6 +52,6 @@ public class NMSWorldHelper extends WorldHelper {
 
     @Override
     public void removePlayer(@Nonnull World world, @Nonnull TNLPlayer player) {
-        ((CraftWorld) world).getHandle().players.remove(((CraftPlayer) player.bukkit()).getHandle());
+        ((CraftWorld) world).getHandle().players().remove(((CraftPlayer) player.bukkit()).getHandle());
     }
 }

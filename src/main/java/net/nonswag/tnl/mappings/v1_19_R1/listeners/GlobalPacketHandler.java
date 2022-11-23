@@ -213,8 +213,6 @@ public class GlobalPacketHandler {
         });
         manager.registerPacketReader(PlayerActionPacket.class, (player, packet, cancelled) -> {
             if (packet.getAction().ordinal() > 2) return;
-            PlayerDamageBlockEvent.BlockDamageType damageType = PlayerDamageBlockEvent.BlockDamageType.fromString(packet.getAction().name());
-            if (damageType.isUnknown()) return;
             BlockPosition position = packet.getPosition();
             Block block = new Location(player.worldManager().getWorld(), position.getX(), position.getY(), position.getZ()).getBlock();
             Block relative = block.getRelative(wrap(packet.getDirection(), 0));
@@ -222,10 +220,10 @@ public class GlobalPacketHandler {
                 position = new BlockPosition(relative.getX(), relative.getY(), relative.getZ());
                 block = new Location(player.worldManager().getWorld(), position.getX(), position.getY(), position.getZ()).getBlock();
             }
-            PlayerDamageBlockEvent blockEvent = new PlayerDamageBlockEvent(player, block, damageType);
+            PlayerDamageBlockEvent blockEvent = new PlayerDamageBlockEvent(player, block, packet.getAction());
             cancelled.set(!blockEvent.call());
             if (blockEvent.isCancelled()) return;
-            if (blockEvent.getBlockDamageType().isInteraction(false)) {
+            if (blockEvent.getAction().isInteraction() && !blockEvent.getAction().equals(PlayerActionPacket.Action.ABORT_DESTROY_BLOCK)) {
                 Bootstrap.getInstance().sync(() -> {
                     BlockFace[] faces = {BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST, BlockFace.NORTH, BlockFace.UP, BlockFace.DOWN};
                     for (BlockFace blockFace : faces) {
@@ -234,7 +232,7 @@ public class GlobalPacketHandler {
                         rel.getState().update(true, false);
                     }
                 });
-            } else if (blockEvent.getBlockDamageType().isItemAction()) {
+            } else if (blockEvent.getAction().isItemAction()) {
                 player.inventoryManager().updateInventory();
             }
         });

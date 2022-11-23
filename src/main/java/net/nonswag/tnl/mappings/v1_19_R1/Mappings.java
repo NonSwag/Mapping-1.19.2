@@ -56,6 +56,10 @@ import java.io.File;
 @MethodsReturnNonnullByDefault
 @Mapping.Info(id = "Mapping-1.19.2", name = "Origin 1.19.2", authors = "NonSwag", description = "An official TNL-Production")
 public class Mappings extends Mapping {
+    private ItemHelper itemHelper;
+    private PluginHelper pluginHelper;
+    private PacketManager packetManager;
+    private LogManager logManager;
 
     public Mappings(File file) {
         super(file);
@@ -132,7 +136,6 @@ public class Mappings extends Mapping {
     @Override
     public PacketManager packetManager() {
         return packetManager == null ? packetManager = new PacketManager() {
-
             private Outgoing outgoing;
             private Incoming incoming;
 
