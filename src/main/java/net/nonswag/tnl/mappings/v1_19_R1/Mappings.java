@@ -17,8 +17,6 @@ import net.nonswag.tnl.listener.api.packets.outgoing.Outgoing;
 import net.nonswag.tnl.listener.api.player.GameProfile;
 import net.nonswag.tnl.listener.api.player.TNLPlayer;
 import net.nonswag.tnl.listener.api.plugin.PluginHelper;
-import net.nonswag.tnl.listener.api.plugin.PluginUpdate;
-import net.nonswag.tnl.listener.api.settings.Settings;
 import net.nonswag.tnl.listener.api.version.Version;
 import net.nonswag.tnl.listener.api.world.WorldHelper;
 import net.nonswag.tnl.mappings.v1_19_R1.api.bossbar.NMSBossBar;
@@ -26,14 +24,14 @@ import net.nonswag.tnl.mappings.v1_19_R1.api.enchantments.EnchantmentWrapper;
 import net.nonswag.tnl.mappings.v1_19_R1.api.entity.NMSArmorStand;
 import net.nonswag.tnl.mappings.v1_19_R1.api.entity.NMSEntityPlayer;
 import net.nonswag.tnl.mappings.v1_19_R1.api.entity.NMSFallingBlock;
-import net.nonswag.tnl.mappings.v1_19_R1.api.item.NMSItem;
 import net.nonswag.tnl.mappings.v1_19_R1.api.helper.NMSItemHelper;
+import net.nonswag.tnl.mappings.v1_19_R1.api.helper.NMSPluginHelper;
+import net.nonswag.tnl.mappings.v1_19_R1.api.helper.NMSWorldHelper;
+import net.nonswag.tnl.mappings.v1_19_R1.api.item.NMSItem;
 import net.nonswag.tnl.mappings.v1_19_R1.api.logger.NMSLogManager;
 import net.nonswag.tnl.mappings.v1_19_R1.api.packets.incoming.IncomingPacketManager;
 import net.nonswag.tnl.mappings.v1_19_R1.api.packets.outgoing.OutgoingPacketManager;
 import net.nonswag.tnl.mappings.v1_19_R1.api.player.NMSPlayer;
-import net.nonswag.tnl.mappings.v1_19_R1.api.helper.NMSPluginHelper;
-import net.nonswag.tnl.mappings.v1_19_R1.api.helper.NMSWorldHelper;
 import net.nonswag.tnl.mappings.v1_19_R1.listeners.GlobalPacketHandler;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -68,9 +66,6 @@ public class Mappings extends Mapping {
     @Override
     public void enable() {
         GlobalPacketHandler.init(Bootstrap.getInstance().getEventManager());
-        async(() -> {
-            if (Settings.AUTO_UPDATER.getValue()) new PluginUpdate(this).downloadUpdate();
-        });
     }
 
     @Override
