@@ -5,6 +5,7 @@ import net.nonswag.core.api.annotation.MethodsReturnNonnullByDefault;
 import net.nonswag.tnl.listener.Bootstrap;
 import net.nonswag.tnl.listener.api.bossbar.TNLBossBar;
 import net.nonswag.tnl.listener.api.enchantment.Enchant;
+import net.nonswag.tnl.listener.api.entity.EntityHelper;
 import net.nonswag.tnl.listener.api.entity.TNLArmorStand;
 import net.nonswag.tnl.listener.api.entity.TNLEntityPlayer;
 import net.nonswag.tnl.listener.api.entity.TNLFallingBlock;
@@ -22,6 +23,7 @@ import net.nonswag.tnl.listener.api.world.WorldHelper;
 import net.nonswag.tnl.mappings.v1_19_R1.api.bossbar.NMSBossBar;
 import net.nonswag.tnl.mappings.v1_19_R1.api.enchantments.EnchantmentWrapper;
 import net.nonswag.tnl.mappings.v1_19_R1.api.entity.NMSArmorStand;
+import net.nonswag.tnl.mappings.v1_19_R1.api.entity.NMSEntityHelper;
 import net.nonswag.tnl.mappings.v1_19_R1.api.entity.NMSEntityPlayer;
 import net.nonswag.tnl.mappings.v1_19_R1.api.entity.NMSFallingBlock;
 import net.nonswag.tnl.mappings.v1_19_R1.api.helper.NMSItemHelper;
@@ -58,6 +60,7 @@ public class Mappings extends Mapping {
     private PluginHelper pluginHelper;
     private PacketManager packetManager;
     private LogManager logManager;
+    private EntityHelper entityHelper;
 
     public Mappings(File file) {
         super(file);
@@ -126,6 +129,11 @@ public class Mappings extends Mapping {
     @Override
     public LogManager logManager() {
         return logManager == null ? logManager = new NMSLogManager() : logManager;
+    }
+
+    @Override
+    public EntityHelper entityHelper() {
+        return entityHelper == null ? entityHelper = new NMSEntityHelper() : entityHelper;
     }
 
     @Override
