@@ -5,10 +5,16 @@ import com.mojang.authlib.properties.Property;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import lombok.Getter;
+import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementRewards;
+import net.minecraft.advancements.DisplayInfo;
+import net.minecraft.advancements.FrameType;
+import net.minecraft.advancements.critereon.ImpossibleTrigger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.PacketSendListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -23,10 +29,12 @@ import net.nonswag.core.api.message.Message;
 import net.nonswag.core.api.reflection.Reflection;
 import net.nonswag.tnl.listener.Bootstrap;
 import net.nonswag.tnl.listener.Listener;
+import net.nonswag.tnl.listener.api.advancement.Toast;
 import net.nonswag.tnl.listener.api.entity.TNLEntity;
 import net.nonswag.tnl.listener.api.entity.TNLEntityLiving;
 import net.nonswag.tnl.listener.api.entity.TNLEntityPlayer;
 import net.nonswag.tnl.listener.api.location.BlockLocation;
+import net.nonswag.tnl.listener.api.mapper.Mapping;
 import net.nonswag.tnl.listener.api.mods.labymod.LabyPlayer;
 import net.nonswag.tnl.listener.api.packets.outgoing.*;
 import net.nonswag.tnl.listener.api.player.Skin;
@@ -50,7 +58,6 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Collection;
@@ -63,6 +70,7 @@ import java.util.function.Consumer;
 @ParametersAreNonnullByDefault
 @MethodsReturnNonnullByDefault
 public class NMSPlayer extends TNLPlayer {
+    private AdvancementManager advancementManager;
     private PermissionManager permissionManager;
     private DataManager dataManager;
     private LabyPlayer labymod;
@@ -92,27 +100,24 @@ public class NMSPlayer extends TNLPlayer {
     private NMSResourceManager resourceManager;
     private Pipeline pipeline;
 
-    public NMSPlayer(@Nonnull Player player) {
+    public NMSPlayer(Player player) {
         super(player);
     }
 
-    @Nonnull
     private ServerPlayer nms() {
         return ((CraftPlayer) bukkit()).getHandle();
     }
 
-    @Nonnull
     private ServerGamePacketListenerImpl playerConnection() {
         return nms().connection;
     }
 
-    @Nonnull
     private ServerLevel worldServer() {
         return ((CraftWorld) bukkit().getWorld()).getHandle();
     }
 
     @Override
-    public void setName(@Nonnull Plugin plugin, @Nonnull String name) {
+    public void setName(Plugin plugin, String name) {
         GameProfile profile = nms().gameProfile;
         Reflection.Field.set(profile, "name", name);
         Listener.getOnlinePlayers().forEach(all -> {
@@ -131,7 +136,6 @@ public class NMSPlayer extends TNLPlayer {
         return nms().latency;
     }
 
-    @Nonnull
     @Override
     public Pose getPlayerPose() {
         return switch (nms().getPose()) {
@@ -153,7 +157,7 @@ public class NMSPlayer extends TNLPlayer {
     }
 
     @Override
-    public void setPlayerPose(@Nonnull Pose pose) {
+    public void setPlayerPose(Pose pose) {
         nms().setPose(switch (pose) {
             case SNEAKING -> net.minecraft.world.entity.Pose.CROUCHING;
             case DYING -> net.minecraft.world.entity.Pose.DYING;
@@ -177,12 +181,49 @@ public class NMSPlayer extends TNLPlayer {
         nms().latency = ping;
     }
 
-    @Nonnull
+    @Override
+    public AdvancementManager advancementManager() {
+        if(advancementManager == null) advancementManager = new AdvancementManager() {
+            @Override
+            public void sendToast(Toast toast) {
+                Advancement advancement = Advancement.Builder.advancement().
+                        display(new DisplayInfo(CraftItemStack.asNMSCopy(toast.getIcon()),
+                                Component.literal(toast.getTitle()), Component.empty(), null,
+                                switch (toast.getType()) {
+                                    case GOAL -> FrameType.GOAL;
+                                    case TASK -> FrameType.TASK;
+                                    case CHALLENGE -> FrameType.CHALLENGE;
+                                }, true, false, false)).rewards(AdvancementRewards.EMPTY).
+                        addCriterion("trigger", new ImpossibleTrigger.TriggerInstance()).
+                        build(new ResourceLocation("listener", "toast"));
+                award(advancement);
+                Mapping.get().sync(() -> revoke(advancement), 2);
+            }
+
+            private void award(Advancement advancement) {
+                for (String[] criteria : advancement.getRequirements()) {
+                    for (String criterion : criteria) nms().getAdvancements().award(advancement, criterion);
+                }
+            }
+
+            private void revoke(Advancement advancement) {
+                for (String[] criteria : advancement.getRequirements()) {
+                    for (String criterion : criteria) nms().getAdvancements().revoke(advancement, criterion);
+                }
+            }
+
+            @Override
+            public TNLPlayer getPlayer() {
+                return NMSPlayer.this;
+            }
+        };
+        return advancementManager;
+    }
+
     @Override
     public PermissionManager permissionManager() {
         if (permissionManager == null) permissionManager = new PermissionManager() {
 
-            @Nonnull
             @Override
             public Map<String, Boolean> getPermissions() {
                 Map<String, Boolean> permissions = Reflection.Field.get(attachment, "permissions");
@@ -190,7 +231,6 @@ public class NMSPlayer extends TNLPlayer {
                 return permissions;
             }
 
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -199,11 +239,9 @@ public class NMSPlayer extends TNLPlayer {
         return permissionManager;
     }
 
-    @Nonnull
     @Override
     public DataManager data() {
         if (dataManager == null) dataManager = new DataManager() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -212,11 +250,9 @@ public class NMSPlayer extends TNLPlayer {
         return dataManager;
     }
 
-    @Nonnull
     @Override
     public LabyPlayer labymod() {
         if (labymod == null) labymod = new LabyPlayer() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -225,11 +261,9 @@ public class NMSPlayer extends TNLPlayer {
         return labymod;
     }
 
-    @Nonnull
     @Override
     public SoundManager soundManager() {
         if (soundManager == null) soundManager = new SoundManager() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -238,11 +272,9 @@ public class NMSPlayer extends TNLPlayer {
         return soundManager;
     }
 
-    @Nonnull
     @Override
     public NPCFactory npcFactory() {
         if (npcFactory == null) npcFactory = new NPCFactory() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -251,11 +283,9 @@ public class NMSPlayer extends TNLPlayer {
         return npcFactory;
     }
 
-    @Nonnull
     @Override
     public HologramManager hologramManager() {
         if (hologramManager == null) hologramManager = new HologramManager() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -264,11 +294,9 @@ public class NMSPlayer extends TNLPlayer {
         return hologramManager;
     }
 
-    @Nonnull
     @Override
     public Messenger messenger() {
         if (messenger == null) messenger = new Messenger() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -277,11 +305,9 @@ public class NMSPlayer extends TNLPlayer {
         return messenger;
     }
 
-    @Nonnull
     @Override
     public ScoreboardManager scoreboardManager() {
         if (scoreboardManager == null) scoreboardManager = new ScoreboardManager() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -290,12 +316,11 @@ public class NMSPlayer extends TNLPlayer {
         return scoreboardManager;
     }
 
-    @Nonnull
     @Override
     public InterfaceManager interfaceManager() {
         if (interfaceManager == null) interfaceManager = new InterfaceManager() {
             @Override
-            public void openVirtualSignEditor(@Nonnull SignMenu signMenu) {
+            public void openVirtualSignEditor(SignMenu signMenu) {
                 closeGUI(false);
                 Location loc = worldManager().getLocation();
                 BlockLocation location = new BlockLocation(worldManager().getWorld(), loc.getBlockX(), Math.max(loc.getBlockY() - 5, 0), loc.getBlockZ());
@@ -314,7 +339,6 @@ public class NMSPlayer extends TNLPlayer {
                 this.signMenu = signMenu;
             }
 
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -323,7 +347,6 @@ public class NMSPlayer extends TNLPlayer {
         return interfaceManager;
     }
 
-    @Nonnull
     @Override
     public WorldManager worldManager() {
         if (worldManager == null) worldManager = new WorldManager() {
@@ -333,7 +356,7 @@ public class NMSPlayer extends TNLPlayer {
             }
 
             @Override
-            public void strikeLightning(@Nonnull Location location, boolean effect, boolean sound) {
+            public void strikeLightning(Location location, boolean effect, boolean sound) {
                 LightningBolt lightning = new LightningBolt(EntityType.LIGHTNING_BOLT, worldServer());
                 lightning.setPos(location.getX(), location.getY(), location.getZ());
                 lightning.setVisualOnly(effect);
@@ -341,7 +364,6 @@ public class NMSPlayer extends TNLPlayer {
                 PacketBuilder.of(lightning.getAddEntityPacket()).send(getPlayer());
             }
 
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -350,11 +372,9 @@ public class NMSPlayer extends TNLPlayer {
         return worldManager;
     }
 
-    @Nonnull
     @Override
     public EnvironmentManager environmentManager() {
         if (environmentManager == null) environmentManager = new EnvironmentManager() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -363,11 +383,9 @@ public class NMSPlayer extends TNLPlayer {
         return environmentManager;
     }
 
-    @Nonnull
     @Override
     public HealthManager healthManager() {
         if (healthManager == null) healthManager = new HealthManager() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -376,7 +394,6 @@ public class NMSPlayer extends TNLPlayer {
         return healthManager;
     }
 
-    @Nonnull
     @Override
     public CombatManager combatManager() {
         if (combatManager == null) combatManager = new CombatManager() {
@@ -407,7 +424,6 @@ public class NMSPlayer extends TNLPlayer {
                 return cause != null ? (LivingEntity) cause.getEntity() : null;
             }
 
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -416,7 +432,6 @@ public class NMSPlayer extends TNLPlayer {
         return combatManager;
     }
 
-    @Nonnull
     @Override
     public SkinManager skinManager() {
         if (skinManager == null) skinManager = new SkinManager() {
@@ -424,7 +439,6 @@ public class NMSPlayer extends TNLPlayer {
             @Nullable
             private Skin skin = null;
 
-            @Nonnull
             @Override
             public Skin getSkin() {
                 if (this.skin == null) {
@@ -440,7 +454,7 @@ public class NMSPlayer extends TNLPlayer {
             }
 
             @Override
-            public void disguise(@Nonnull TNLEntity entity, @Nonnull TNLPlayer receiver) {
+            public void disguise(TNLEntity entity, TNLPlayer receiver) {
                 if (getPlayer().equals(receiver)) return;
                 RemoveEntitiesPacket.create(getPlayer().bukkit()).send(receiver);
                 int id = entity.getEntityId();
@@ -469,7 +483,6 @@ public class NMSPlayer extends TNLPlayer {
                 nms().getEntityData().set(net.minecraft.world.entity.player.Player.DATA_PLAYER_MODE_CUSTOMISATION, (byte) (cape ? 127 : 126));
             }
 
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -478,12 +491,11 @@ public class NMSPlayer extends TNLPlayer {
         return skinManager;
     }
 
-    @Nonnull
     @Override
     public InventoryManager inventoryManager() {
         if (inventoryManager == null) inventoryManager = new InventoryManager() {
             @Override
-            public void dropItem(@Nonnull ItemStack item, @Nonnull Consumer<org.bukkit.entity.Item> after) {
+            public void dropItem(ItemStack item, Consumer<org.bukkit.entity.Item> after) {
                 Bootstrap.getInstance().sync(() -> {
                     ItemEntity drop = nms().drop(CraftItemStack.asNMSCopy(item), true, true, false);
                     if (!(drop instanceof org.bukkit.entity.Item)) return;
@@ -491,7 +503,6 @@ public class NMSPlayer extends TNLPlayer {
                 });
             }
 
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -500,11 +511,9 @@ public class NMSPlayer extends TNLPlayer {
         return inventoryManager;
     }
 
-    @Nonnull
     @Override
     public DebugManager debugManager() {
         if (debugManager == null) debugManager = new DebugManager() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -513,19 +522,16 @@ public class NMSPlayer extends TNLPlayer {
         return debugManager;
     }
 
-    @Nonnull
     @Override
     public AttributeManager attributeManager() {
         if (attributeManager == null) attributeManager = new AttributeManager() {
-            @Nonnull
             @Override
-            public AttributeInstance getAttribute(@Nonnull Attribute attribute) {
+            public AttributeInstance getAttribute(Attribute attribute) {
                 AttributeInstance instance = bukkit().getAttribute(attribute);
                 assert instance != null;
                 return instance;
             }
 
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -534,7 +540,6 @@ public class NMSPlayer extends TNLPlayer {
         return attributeManager;
     }
 
-    @Nonnull
     @Override
     public MetaManager metaManager() {
         if (metaManager == null) metaManager = new MetaManager() {
@@ -548,7 +553,6 @@ public class NMSPlayer extends TNLPlayer {
                 throw new UnsupportedOperationException();
             }
 
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -557,11 +561,9 @@ public class NMSPlayer extends TNLPlayer {
         return metaManager;
     }
 
-    @Nonnull
     @Override
     public EffectManager effectManager() {
         if (effectManager == null) effectManager = new EffectManager() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -570,11 +572,9 @@ public class NMSPlayer extends TNLPlayer {
         return effectManager;
     }
 
-    @Nonnull
     @Override
     public AbilityManager abilityManager() {
         if (abilityManager == null) abilityManager = new AbilityManager() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -583,11 +583,9 @@ public class NMSPlayer extends TNLPlayer {
         return abilityManager;
     }
 
-    @Nonnull
     @Override
     public ServerManager serverManager() {
         if (serverManager == null) serverManager = new ServerManager() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -596,11 +594,9 @@ public class NMSPlayer extends TNLPlayer {
         return serverManager;
     }
 
-    @Nonnull
     @Override
     public CinematicManger cinematicManger() {
         if (cinematicManger == null) cinematicManger = new CinematicManger() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -609,11 +605,9 @@ public class NMSPlayer extends TNLPlayer {
         return cinematicManger;
     }
 
-    @Nonnull
     @Override
     public TitleManager titleManager() {
         if (titleManager == null) titleManager = new TitleManager() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -622,11 +616,9 @@ public class NMSPlayer extends TNLPlayer {
         return titleManager;
     }
 
-    @Nonnull
     @Override
     public ParticleManager particleManager() {
         if (particleManager == null) particleManager = new ParticleManager() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -635,11 +627,9 @@ public class NMSPlayer extends TNLPlayer {
         return particleManager;
     }
 
-    @Nonnull
     @Override
     public BossBarManager bossBarManager() {
         if (bossBarManager == null) bossBarManager = new BossBarManager() {
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -648,7 +638,6 @@ public class NMSPlayer extends TNLPlayer {
         return bossBarManager;
     }
 
-    @Nonnull
     @Override
     public CooldownManager cooldownManager() {
         if (cooldownManager == null) cooldownManager = new CooldownManager() {
@@ -662,7 +651,6 @@ public class NMSPlayer extends TNLPlayer {
                 nms().oAttackAnim = cooldown;
             }
 
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -671,11 +659,9 @@ public class NMSPlayer extends TNLPlayer {
         return cooldownManager;
     }
 
-    @Nonnull
     @Override
     public NMSResourceManager resourceManager() {
         if (resourceManager == null) resourceManager = new NMSResourceManager() {
-            @Nonnull
             @Override
             public NMSPlayer getPlayer() {
                 return NMSPlayer.this;
@@ -684,18 +670,16 @@ public class NMSPlayer extends TNLPlayer {
         return resourceManager;
     }
 
-    @Nonnull
     @Override
     public Pipeline pipeline() {
         return pipeline == null ? pipeline = new Pipeline() {
 
-            @Nonnull
             private final String name = getName() + "-TNLListener";
             @Getter
             private boolean injected = false;
 
             @Override
-            public <P> void sendPacket(@Nonnull P p, @Nullable net.nonswag.tnl.listener.api.packets.PacketSendListener listener) {
+            public <P> void sendPacket(P p, @Nullable net.nonswag.tnl.listener.api.packets.PacketSendListener listener) {
                 if (p instanceof Packet<?> packet) playerConnection().send(packet, listener != null ? new PacketSendListener() {
                     @Override
                     public void onSuccess() {
@@ -732,7 +716,6 @@ public class NMSPlayer extends TNLPlayer {
                 try {
                     ChannelPipeline pipeline = nms().networkManager.channel.pipeline();
                     pipeline.addBefore("packet_handler", name, new PlayerChannelHandler() {
-                        @Nonnull
                         @Override
                         public TNLPlayer getPlayer() {
                             return NMSPlayer.this;
@@ -745,7 +728,6 @@ public class NMSPlayer extends TNLPlayer {
                 }
             }
 
-            @Nonnull
             @Override
             public TNLPlayer getPlayer() {
                 return NMSPlayer.this;
